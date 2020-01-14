@@ -1,2 +1,2 @@
 # PlayerPointsTable
-[https://liquipedia.net/rocketleague/Module:Sandbox/PlayerPointsTable](Liquipedia Sandbox Link)
+[Liquipedia Sandbox Link](https://liquipedia.net/rocketleague/Module:Sandbox/PlayerPointsTable)
