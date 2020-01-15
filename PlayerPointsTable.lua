@@ -18,7 +18,9 @@ function p.main(frame)
     local args = getArgs(frame)
     local div = mw.html.create('div')
     local htmlTable = makeTable(frame, args)
-    div:attr('class', 'table-responsive'):node(htmlTable)
+    div
+        :addClass('table-responsive')
+        :node(htmlTable)
     return div
 end
 
@@ -29,16 +31,23 @@ end
 -- @return mw.html object
 function makeTable(frame, args)
     local htmlTable = mw.html.create('table')
-    htmlTable:attr('class', 'wikitable'):attr('style', 'text-align:center;font-size:90%')
+    htmlTable
+        :addClass('wikitable')
+        :css('text-align', ':center')
+        :css('font-size', '90%')
     i = 1
     -- make header row
     local tr = htmlTable:tag('tr')
     -- position col
     local th = tr:tag('th')
-    th:wikitext('Position'):done()
+    th
+        :wikitext('Position')
+        :done()
     -- player name col
     th = tr:tag('th')
-    th:wikitext('Player'):done()
+    th
+        :wikitext('Player')
+        :done()
     -- points' columns
     while args['colname'..i] do
         th = tr:tag('th')
@@ -48,14 +57,20 @@ function makeTable(frame, args)
         else
             temp = args['colname'..i]
         end
-        th:wikitext(temp):done()
+        th
+            :wikitext(temp)
+            :done()
         i = i + 1
     end
     -- empty column (separator) followed by totals column
     th = tr:tag('th')
-    th:wikitext(''):done()
+    th
+        :wikitext('')
+        :done()
     th = tr:tag('th')
-    th:wikitext('Total'):done()
+    th
+        :wikitext('Total')
+        :done()
     tr:done()
     -- number of columns which will contain numbers (including the totals column)
     local numCols = i
@@ -77,27 +92,39 @@ function makeTable(frame, args)
     ---- start looping the rows
     for playerIndex, rowData in pairs(data) do
         pData = rowData['pData']
-        tr = htmlTable:tag('tr')
-        td = tr:tag('td')
         if tonumber(pData['total']) < prevPoints then
             appearantPlace = actualPlace + 1
         end
-        td:attr('align', 'center'):wikitext(getMedalOrd(frame, appearantPlace)):done()
+        tr = htmlTable:tag('tr')
+        td = tr:tag('td')
+        td
+            :attr('align', 'center')
+            :wikitext(getMedalOrd(frame, appearantPlace))
+            :done()
         td = tr:tag('td')
         pflag = protectedExpansion(frame, 'flag/'..pData['flag'])
-        td:attr('align', 'left'):wikitext(pflag..' '..pData['expandedLink']):done()
+        td
+            :attr('align', 'left')
+            :wikitext(pflag..' '..pData['expandedLink'])
+            :done()
         for k, col in pairs(rowData['points']) do
             td = tr:tag('td')
-            td:wikitext(col):done()
+            td
+                :wikitext(col)
+                :done()
         end
         -- add totals col
         td = tr:tag('th')
-        td:wikitext(''):done()
+        td
+            :wikitext('')
+            :done()
         td = tr:tag('td')
-        td:wikitext(pData['total']):done()
+        td
+            :wikitext(pData['total'])
+            :done()
         -- add the coloring for the row if there is
         if args['bg'..actualPlace+1] then
-            tr:attr('style', 'background: '..protectedExpansion(frame, 'Color', {args['bg'..actualPlace + 1]}) )
+            tr:css('background', protectedExpansion(frame, 'Color', {args['bg'..actualPlace + 1]}) )
         end
         tr:done()
         -- iterate counters
@@ -113,19 +140,22 @@ end
 -- @param numCols number
 -- @return a table
 function fetchData(args, numCols)
-    data = {}
-    currentP = 1
+    local data = {}
+    local currentP = 1
     -- loop the players
     while args['p'..currentP] do
-        tempP = {}
-        total = 0
+        local tempP = {}
+        local total = 0
         -- loop the columns for the player (all columns except the total points column)
         for currentCol = 1, numCols - 1 do
-            tempP[currentCol] = getColSafe(args, 'p'..currentP..'col'..currentCol, args['finished'..currentCol] and '-' or '')
+            tempP[currentCol] = getColSafe(
+                args, 'p'..currentP..'col'..currentCol,
+                args['finished'..currentCol] and '-' or ''
+            )
             total = total + getNum(tempP[currentCol])
         end
         -- add the player data and points to the dataset
-        pData = {}
+        local pData = {}
         pData['name'] = args['p'..currentP]
         pData['flag'] = args['flag'..currentP] or ''
         pData['total'] = total
@@ -229,7 +259,8 @@ function comparePlayers(a, b)
     if a['pData']['total'] > b['pData']['total'] then
         return true
     end
-    if (a['pData']['total'] == b['pData']['total']) and (a['pData']['name'] < b['pData']['name']) then
+    if (a['pData']['total'] == b['pData']['total'])
+    and (a['pData']['name'] < b['pData']['name']) then
         return true
     end
     return false
