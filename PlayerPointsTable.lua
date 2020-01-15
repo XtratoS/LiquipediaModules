@@ -181,7 +181,7 @@ function getColSafe(args, index, default)
     end
 end
 
---- Safely returns a number
+--- Safely returns a number.
 -- Ensures a value is a number, returns 0 if the value isn't a number
 -- @param val string
 -- @return a number value
