@@ -209,7 +209,7 @@ function fetchData(args, numCols, ent, frame)
     return data
 end
 
---- divides multiple arguments given in the same argument.
+--- Divides multiple arguments given in the same argument.
 -- Easy Flags divides the arguments that contain multiple flag numbers (flagX,Y,Z)
 -- And Modifies the given args to include individual flags (flagX, flagY, flagZ)
 -- Useful to give a better editing experience
