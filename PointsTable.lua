@@ -53,6 +53,9 @@ function makeTable(frame, args, entities)
         :addClass('wikitable')
         :css('text-align', ':center')
         :css('font-size', '90%')
+    if args['collapsed'] then
+        htmlTable:addClass('collapsible'):addClass('collapsed')
+    end
     i = 1
     -- make header row
     local tr = htmlTable:tag('tr')
@@ -95,6 +98,10 @@ function makeTable(frame, args, entities)
     if args['easyflags'] then
         easyFlags(args, 'flag', ',')
     end
+    -- easyBg
+    if args['easybg'] then
+        easyFlags(args, 'bg', ',')
+    end
     -- get rows data
     local ent = string.sub(string.lower(entities), 1, 1)
     local data = fetchData(args, numCols, ent, frame)
@@ -106,17 +113,20 @@ function makeTable(frame, args, entities)
     ---- placeholders
     local eData
     local td
+    local positionData
     ---- start looping the rows
     for playerIndex, rowData in pairs(data) do
         eData = rowData['eData']
         if tonumber(eData['total']) < prevPoints then
             appearantPlace = actualPlace + 1
         end
+        positionData = getMedalOrd(frame, appearantPlace)
         tr = htmlTable:tag('tr')
         td = tr:tag('td')
         td
             :attr('align', 'center')
-            :wikitext(getMedalOrd(frame, appearantPlace))
+            :css('background', positionData['bg'])
+            :wikitext(positionData['text'])
             :done()
         td = tr:tag('td')
         td:attr('align', 'left')
@@ -225,7 +235,7 @@ function easyFlags(args, keyword, delim)
             local kc = string.gsub(k, keyword, '')
             local keys = split(kc, delim)
             for t, key in pairs(keys) do
-                args['flag'..key] = val
+                args[keyword..key] = val
             end
         end
     end
@@ -263,11 +273,16 @@ end
 function getMedalOrd(frame, pos)
     local medal = ''
     local ordinal
+    local obj = {}
     if pos < 5 then
         medal = protectedExpansion(frame, 'Medal', {pos})
+        obj['bg'] = protectedExpansion(frame, 'Color', {pos})
+    else
+        obj['bg'] = protectedExpansion(frame, 'Color', {'bye'})
     end
     ordinal = protectedExpansion(frame, 'Ordinal', {pos})
-    return medal..' \'\'\''..ordinal..'\'\'\''
+    obj['text'] = medal..' \'\'\''..ordinal..'\'\'\''
+    return obj
 end
 
 --- Splits a string by a delim.
@@ -295,7 +310,7 @@ function compareEntities(a, b)
         return true
     end
     if (a['eData']['total'] == b['eData']['total'])
-    and (a['eData']['name'] < b['eData']['name']) then
+    and (string.lower(a['eData']['name']) < string.lower(b['eData']['name'])) then
         return true
     end
     return false
