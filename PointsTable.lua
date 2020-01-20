@@ -286,7 +286,7 @@ function split(s, delim)
 end
 
 --- Custom sorting function.
--- Custom sorting function to sort data-rows by total points followed by team name.
+-- Custom sorting function to sort data-rows by total points followed by player/team name.
 -- @param a object
 -- @param b object
 -- @return boolean
