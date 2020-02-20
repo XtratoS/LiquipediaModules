@@ -89,7 +89,7 @@ function makeTable(frame, args, entities)
         :done()
     th = tr:tag('th')
     th
-        :wikitext('Total')
+        :wikitext(args['colnametotal'] or 'Total')
         :done()
     tr:done()
     -- number of columns which will contain numbers (including the totals column)
@@ -144,6 +144,7 @@ function makeTable(frame, args, entities)
             td = tr:tag('td')
             td
                 :wikitext(col)
+                :attr('align', 'center')
                 :done()
         end
         -- add totals col
@@ -154,6 +155,7 @@ function makeTable(frame, args, entities)
         td = tr:tag('td')
         td
             :wikitext(eData['total'])
+            :attr('align', 'center')
             :done()
         -- add the coloring for the row if there is
         if args['bg'..actualPlace+1] then
