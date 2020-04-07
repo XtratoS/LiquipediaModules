@@ -157,9 +157,16 @@ function makeTable(frame, args, entities)
             :wikitext(eData['total'])
             :attr('align', 'center')
             :done()
-        -- add the coloring for the row if there is
-        if args['bg'..actualPlace+1] then
-            tr:css('background', protectedExpansion(frame, 'Color', {args['bg'..actualPlace + 1]}) )
+        -- if coloring by entity, force the colors to follow the entity regardless of the row its in
+        -- otherwise just color the row at the mentioned index
+        if args['coloring'] and string.lower(args['coloring']) == 'entity' then
+            if rowData['bg'] then
+                tr:css('background', protectedExpansion(frame, 'Color', {rowData['bg']}) )
+            end
+        else
+            if args['bg'..actualPlace+1] then
+                tr:css('background', protectedExpansion(frame, 'Color', {args['bg'..actualPlace + 1]}) )
+            end
         end
         tr:done()
         -- iterate counters
@@ -214,6 +221,7 @@ function fetchData(args, numCols, ent, frame)
         data[currentE] = {}
         data[currentE]['eData'] = eData
         data[currentE]['points'] = tempE
+        data[currentE]['bg'] = args['bg'..currentE] or ''
         currentE = currentE + 1
     end
     -- sort the data rows using compareEntities custom function
