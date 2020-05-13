@@ -120,7 +120,12 @@ function makeTable(frame, args, entities)
         if tonumber(eData['total']) < prevPoints then
             appearantPlace = actualPlace + 1
         end
-        positionData = getMedalOrd(frame, appearantPlace)
+        -- gives the option to enable/disable showing positions, this was created to hide positions when tournaments haven't started yet
+        if (args['positions'] == 'true') then
+            positionData = getMedalOrd(frame, appearantPlace)
+        else
+            positionData = {text = '-'}
+        end
         tr = htmlTable:tag('tr')
         td = tr:tag('td')
         td
