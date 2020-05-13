@@ -24,9 +24,7 @@ function printHeader(name, icon)
         'Total Overtimes'
     }
 
-    local div = mw.html.create('div')
-    div:attr('class', 'table-responsive')
-    local htmlTable = div:tag('table')
+    local htmlTable = mw.html.create('table')
     htmlTable:attr('class', 'wikitable'):css('text-align', 'center')
 
     local tr = htmlTable:tag('tr')
@@ -49,7 +47,9 @@ function printTable(name, icon, rows)
     end
     printCombinedRow(htmlTable, rows[#rows])
     htmlTable:allDone()
-    return htmlTable
+    local div = mw.html.create('div')
+    div:attr('class', 'table-responsive'):node(htmlTable):done()
+    return div
 end
 
 function printRow(htmlTable, icon, row)
@@ -103,7 +103,7 @@ function printCombinedRow(htmlTable, row)
     for i = 1, 12, 1 do
         cell = tr:tag('td')
         cell:attr('colspan', '1')
-        if string.match(row[i], "nan") or row[i] == 0 then
+        if string.match(row[i], "nan") or tostring(row[i]) == '0' then
             cell:wikitext('')
         else
             cell:wikitext(row[i])
