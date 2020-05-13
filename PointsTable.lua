@@ -96,11 +96,11 @@ function makeTable(frame, args, entities)
     local numCols = i
     -- easyFlags
     if args['easyflags'] then
-        easyFlags(args, 'flag', ',')
+        args = easyParams(args, 'flag', ',')
     end
     -- easyBg
     if args['easybg'] then
-        easyFlags(args, 'bg', ',')
+        args = easyParams(args, 'bg', ',')
     end
     -- get rows data
     local ent = string.sub(string.lower(entities), 1, 1)
@@ -230,25 +230,27 @@ function fetchData(args, numCols, ent, frame)
 end
 
 --- Divides multiple arguments given in the same argument.
--- Easy Flags divides the arguments that contain multiple flag numbers (flagX,Y,Z)
--- And Modifies the given args to include individual flags (flagX, flagY, flagZ)
+-- easyParams divides the arguments that contain multiple parameter numbers (paramX,Y,Z)
+-- And Modifies the given args to include individual parameters (paramX, paramY, paramZ)
 -- Useful to give a better editing experience
 -- expandable to other arguments and delimiters by providing a different "keyword" and "delim".
 -- @param args table - the template arguments
 -- @param keyword string
 -- @param delim string
--- @return nothing
-function easyFlags(args, keyword, delim)
+-- @return a table - the required divided parameters
+function easyParams(args, keyword, delim)
     delim = delim or ','
+	newArgs = shallow_copy(args)
     for k, val in pairs(args) do
         if string.find(k, keyword..'[0-9]+[,]') then
             local kc = string.gsub(k, keyword, '')
             local keys = split(kc, delim)
             for t, key in pairs(keys) do
-                args[keyword..key] = val
+                newArgs[keyword..key] = val
             end
         end
     end
+	return newArgs
 end
 
 --- Safely returns a value.
@@ -349,6 +351,15 @@ end
 -- @return a string value - the expanded template
 function expandTemplate(frame, title, args)
     return frame:expandTemplate {title = title, args = args}
+end
+
+--- Copies a table non-recursively (Shallow Copy)
+function shallow_copy(t)
+	local t2 = {}
+	for k,v in pairs(t) do
+		t2[k] = v
+	end
+	return t2
 end
 
 return p
