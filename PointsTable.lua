@@ -151,6 +151,7 @@ function makeTable(frame, args, entities)
         td:done()
         for k, col in pairs(rowData['points']) do
             td = tr:tag('td')
+            -- check for auto-qualification in totals column
             if col == 'q' then
                 td
                     :wikitext("[[File:GreenCheck.png]] '''Qualified'''")
@@ -168,7 +169,7 @@ function makeTable(frame, args, entities)
             :wikitext('')
             :done()
         td = tr:tag('td')
-        -- check for auto-qualification
+        -- check for auto-qualification in totals column
         if eData['total'] == 'q' then
             td
                 :wikitext("'''Qualified'''")
@@ -219,6 +220,7 @@ function fetchData(args, numCols, ent, frame)
                 args, ent..currentE..'col'..currentCol,
                 args['finished'..currentCol] and '-' or ''
             )
+            -- if the entity has auto-qualified, mention the qualification in the totals column
             if tempE[currentCol] == 'q' then
                 total = 'q'
                 eData['qat'] = currentCol
