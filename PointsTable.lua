@@ -51,7 +51,7 @@ function makeTable(frame, args, entities)
     local htmlTable = mw.html.create('table')
     htmlTable
         :addClass('wikitable')
-        :css('text-align', ':center')
+        :css('text-align', 'center')
         :css('font-size', '90%')
     if args['collapsed'] then
         htmlTable:addClass('collapsible'):addClass('collapsed')
@@ -114,10 +114,14 @@ function makeTable(frame, args, entities)
     local eData
     local td
     local positionData
-    ---- start looping the rows
+    ---- start looping the rows and use the data to create HTML
     for playerIndex, rowData in pairs(data) do
         eData = rowData['eData']
-        if tonumber(eData['total']) < prevPoints then
+        if tonumber(eData['total']) == nil then
+            
+        elseif tonumber(prevPoints) == nil then
+            appearantPlace = actualPlace + 1
+        elseif tonumber(eData['total']) < prevPoints then
             appearantPlace = actualPlace + 1
         end
         -- gives the option to enable/disable showing positions, this was created to hide positions when tournaments haven't started yet
@@ -147,8 +151,14 @@ function makeTable(frame, args, entities)
         td:done()
         for k, col in pairs(rowData['points']) do
             td = tr:tag('td')
+            if col == 'q' then
+                td
+                    :wikitext("[[File:GreenCheck.png]] '''Qualified'''")
+            else
+                td
+                    :wikitext(col)
+            end
             td
-                :wikitext(col)
                 :attr('align', 'center')
                 :done()
         end
@@ -158,8 +168,15 @@ function makeTable(frame, args, entities)
             :wikitext('')
             :done()
         td = tr:tag('td')
+        -- check for auto-qualification
+        if eData['total'] == 'q' then
+            td
+                :wikitext("'''Qualified'''")
+        else
+            td
+                :wikitext(eData['total'])
+        end
         td
-            :wikitext(eData['total'])
             :attr('align', 'center')
             :done()
         -- if coloring by entity, force the colors to follow the entity regardless of the row its in
@@ -195,16 +212,21 @@ function fetchData(args, numCols, ent, frame)
     while args[ent..currentE] do
         local tempE = {}
         local total = 0
+        local eData = {}
         -- loop the columns for the player (all columns except the total points column)
         for currentCol = 1, numCols - 1 do
             tempE[currentCol] = getColSafe(
                 args, ent..currentE..'col'..currentCol,
                 args['finished'..currentCol] and '-' or ''
             )
-            total = total + getNum(tempE[currentCol])
+            if tempE[currentCol] == 'q' then
+                total = 'q'
+                eData['qat'] = currentCol
+            elseif total ~= 'q' then
+                total = total + getNum(tempE[currentCol])
+            end
         end
         -- add the player/team data and points to the dataset
-        local eData = {}
         eData['name'] = args[ent..currentE]
         -- expandedEntity is what will be places in the first column of each row,
         -- for players it would be a link to their playerpage,
@@ -323,14 +345,27 @@ end
 -- @param b object
 -- @return boolean
 function compareEntities(a, b)
-    if a['eData']['total'] > b['eData']['total'] then
+    if a['eData']['total'] == 'q' and b['eData']['total'] == 'q' then
+        if a['eData']['qat'] <= b['eData']['qat'] then
+            return true
+        else
+            return false
+        end
+    elseif a['eData']['total'] == 'q' and b['eData']['total'] ~= 'q' then
         return true
-    end
-    if (a['eData']['total'] == b['eData']['total'])
-    and (string.lower(a['eData']['name']) < string.lower(b['eData']['name'])) then
+    elseif a['eData']['total'] ~= 'q' and b['eData']['total'] == 'q' then
+        return false
+    elseif a['eData']['total'] > b['eData']['total'] then
         return true
+    elseif a['eData']['total'] < b['eData']['total'] then
+        return false
+    else
+        if (string.lower(a['eData']['name']) < string.lower(b['eData']['name'])) then
+            return true
+        else
+            return false
+        end
     end
-    return false
 end
 
 --- Safely expands a template.
