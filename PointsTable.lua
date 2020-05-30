@@ -115,7 +115,10 @@ function makeTable(frame, args, entities)
     local td
     local positionData
     ---- start looping the rows and use the data to create HTML
-    for playerIndex, rowData in pairs(data) do
+    local num_players = getNum(args['cutoff'], #data)
+    local rowData
+    for playerIndex = 1, num_players do
+        rowData = data[playerIndex]
         eData = rowData['eData']
         if tonumber(eData['total']) == nil then
             
@@ -300,9 +303,16 @@ end
 --- Safely returns a number.
 -- Ensures a value is a number, returns 0 if the value isn't a number
 -- @param val string
--- @return a number value
-function getNum(val)
-    return tonumber(val) or 0
+-- @param default string
+-- @return a number value, val converted to number if it's convertable, otherwise returns default
+function getNum(val, default)
+    if tonumber(val) then
+        return tonumber(val)
+    elseif default then
+        return default
+    else
+        return 0
+    end
 end
 
 --- Returns expanded position of a player.
