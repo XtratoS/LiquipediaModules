@@ -1,5 +1,5 @@
 -- TODO
----- Add support for templates in header row (currently templates can be added by simply expanding them in the supplied arguments)
+---- Currently None
 -- Expanded Templates
 ---- https://liquipedia.net/rocketleague/Template:Team
 ---- https://liquipedia.net/rocketleague/Template:Flag/country
