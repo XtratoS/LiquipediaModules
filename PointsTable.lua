@@ -115,8 +115,8 @@ function makeTable(frame, args, entities)
     ------ the number of entities to stop showing completely at
     local num_players = getNum(args['removeafter'], #data)
     ------ the number of entities to collpase after
-    if num_players > 4 then
-        htmlTable:addClass('prizepooltable'):addClass('collapsed'):attr('data-cutafter', getNum(args['cutafter'], '4'))
+    if num_players > 12 then
+        htmlTable:addClass('prizepooltable'):addClass('collapsed'):attr('data-cutafter', getNum(args['cutafter'], '12'))
     end
 
     local rowData
