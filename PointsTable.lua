@@ -53,9 +53,6 @@ function makeTable(frame, args, entities)
         :addClass('wikitable')
         :css('text-align', 'center')
         :css('font-size', '90%')
-    if args['collapsed'] then
-        htmlTable:addClass('collapsible'):addClass('collapsed')
-    end
     i = 1
     -- make header row
     local tr = htmlTable:tag('tr')
@@ -115,7 +112,13 @@ function makeTable(frame, args, entities)
     local td
     local positionData
     ---- start looping the rows and use the data to create HTML
-    local num_players = getNum(args['cutoff'], #data)
+    ------ the number of entities to stop showing completely at
+    local num_players = getNum(args['removeafter'], #data)
+    ------ the number of entities to collpase after
+    if num_players > 4 then
+        htmlTable:addClass('prizepooltable'):addClass('collapsed'):attr('data-cutafter', getNum(args['cutafter'], '4'))
+    end
+
     local rowData
     for playerIndex = 1, num_players do
         rowData = data[playerIndex]
@@ -158,6 +161,9 @@ function makeTable(frame, args, entities)
             if col == 'q' then
                 td
                     :wikitext("[[File:GreenCheck.png]] '''Qualified'''")
+            elseif rowData['bolds'][k] == true then
+                td
+                    :wikitext("'''"..col.."'''")
             else
                 td
                     :wikitext(col)
@@ -215,6 +221,7 @@ function fetchData(args, numCols, ent, frame)
     -- loop the players
     while args[ent..currentE] do
         local tempE = {}
+        local bolds = {}
         local total = 0
         local eData = {}
         -- loop the columns for the player (all columns except the total points column)
@@ -229,6 +236,8 @@ function fetchData(args, numCols, ent, frame)
                 eData['qat'] = currentCol
             elseif total ~= 'q' then
                 total = total + getNum(tempE[currentCol])
+                -- check if this column in this row is bold (bolded always follow the entity not the row number)
+                if args[ent..currentE..'col'..currentCol..'bold'] == 'true' then bolds[currentCol] = true end
             end
         end
         -- add the player/team data and points to the dataset
@@ -253,6 +262,7 @@ function fetchData(args, numCols, ent, frame)
         data[currentE] = {}
         data[currentE]['eData'] = eData
         data[currentE]['points'] = tempE
+        data[currentE]['bolds'] = bolds
         data[currentE]['bg'] = args['bg'..currentE] or ''
         currentE = currentE + 1
     end
