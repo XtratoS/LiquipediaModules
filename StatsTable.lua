@@ -7,6 +7,11 @@ for m = 1, 12, 1 do
     maximas[m] = 0
 end
 
+---- Create the header row
+-- Creates the header row html node
+-- @param name string - the name of the tournament
+-- @param icon string - the icon of the tournament (in html code)
+-- @return a node - html table node
 function printHeader(name, icon)
     local headertext = {
         'Week',
@@ -40,6 +45,12 @@ function printHeader(name, icon)
     return htmlTable
 end
 
+---- Create the rest of the table
+-- Creates all the html table rows nodes except the header and the combined rows
+-- @param name string - the name of the tournament
+-- @param icon string - the icon in the header and each row (in html code)
+-- @param rows table - the rows of the table
+-- @return a string - expanded html div that includes the html table
 function printTable(name, icon, rows)
     local htmlTable = printHeader(name, icon)
     for i = 1, #rows - 1, 1 do
@@ -52,6 +63,11 @@ function printTable(name, icon, rows)
     return div
 end
 
+---- Create a single html table row
+-- Creates a single html table row to the provided html table node
+-- @param htmlTable node - the html table node to insert the html table row to
+-- @param icon string - the icon of the row (in html code)
+-- @return nil
 function printRow(htmlTable, icon, row)
     local bold = {}
     for i = 1, 12, 1 do
@@ -87,6 +103,11 @@ function printRow(htmlTable, icon, row)
     end
 end
 
+---- Create the combined row
+-- Creates the combined row which adds up the points in each column
+-- @param htmlTable node - the html node to add the table row to
+-- @param row table - the row to add to the table
+-- @return nil
 function printCombinedRow(htmlTable, row)
     fixRow(row)
     fixOrder(row)
@@ -113,6 +134,7 @@ function printCombinedRow(htmlTable, row)
     tr:done()
 end
 
+---- The entry point of the Module
 function p.main(frame)
     local args = getArgs(frame)
     local error = mw.html.create('div')
@@ -162,6 +184,10 @@ local argnames = {
     'totalot'
 }
 
+---- Divides arguments to a table
+-- Divides arguments into a table of rows, each row is a table of data that's required to construct the html node of this row
+-- @param args table - the arguments provided to the template
+-- @return table - the divided rows
 function getRows(args)
     local rows = {}
     -- local nilval = false
@@ -190,6 +216,9 @@ function getRows(args)
     return rows
 end
 
+---- Calculates the per game per player stats using the table data
+-- @param rows table - the table which has the rows' data
+-- return table - the table after adding the per player per game stats to it
 function calcPerStats(rows)
     for i, row in pairs(rows) do
         if row['finished'] == 'true' then
@@ -210,6 +239,10 @@ function calcPerStats(rows)
     return rows
 end
 
+---- Calculate the maximum number in each row
+---- Calculate the maximum number in each row
+-- @param rows table - the table which has the rows' data
+-- @return nil
 function calcMaximas(rows)
     --calculate maximas
     for i, row in pairs(rows) do
@@ -223,6 +256,10 @@ function calcMaximas(rows)
     end
 end
 
+---- Fix the formatting of some rows
+-- Formats some of the rows
+-- @param row table - the row to fix the formatting of
+-- @return nil
 function fixRow(row)
     local lang = mw.language.new('en')
     if row.finished == 'true' then
@@ -234,6 +271,10 @@ function fixRow(row)
     end
 end
 
+---- Formats a decimal to have a specific number of decimal places
+-- @param num number - the number to format
+-- @param len number - the number of decimal places
+-- @return string - the formatted number in a string container
 function formatDec(num, len)
     local ret = math.floor(num * 100 + 0.5) / 100
     local strret = tostring(ret)
@@ -246,6 +287,9 @@ function formatDec(num, len)
     return strret
 end
 
+---- Reorders cells in a row
+-- @param row table - the row to reorder
+-- @return nil
 function fixOrder(row)
     local newRow = {}
     newRow[1] = row[1]
@@ -265,6 +309,9 @@ function fixOrder(row)
     end
 end
 
+---- Calculates the combined stats of the whole table.
+-- @param rows table
+-- @return a table - the table with the combined stats row added
 function calcCombinedStats(rows)
     local combinedData = {rowname = 'Combined', finished = 'true'}
     local datum
@@ -282,6 +329,12 @@ function calcCombinedStats(rows)
     return calcPerStats({combinedData})
 end
 
+--- Safely expands a template.
+-- Expands a template while making sure a missing template doesn't stop the code execution.
+-- @param frame frame
+-- @param tile string
+-- @param args table
+-- @return a string value - the expansion if exists, else error message
 function protectedExpansion(frame, title, args)
     local status, result = pcall(expandTemplate, frame, title, args)
     if status == true then
@@ -291,6 +344,12 @@ function protectedExpansion(frame, title, args)
     end
 end
 
+--- Expands a template.
+-- Expands a template using a frame and returns the result of the expansion.
+-- @param frame frame
+-- @param title string
+-- @param args table
+-- @return a string value - the expanded template
 function expandTemplate(frame, title, args)
     return frame:expandTemplate {title = title, args = args}
 end
