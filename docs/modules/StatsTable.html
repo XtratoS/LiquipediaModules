@@ -1,0 +1,522 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<head>
+    <title>Reference</title>
+    <link rel="stylesheet" href="../ldoc.css" type="text/css" />
+</head>
+<body>
+
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+
+<div id="main">
+
+
+<!-- Menu -->
+
+<div id="navigation">
+<br/>
+<h1>ldoc</h1>
+
+<ul>
+  <li><a href="../index.html">Index</a></li>
+</ul>
+
+<h2>Contents</h2>
+<ul>
+<li><a href="#Functions">Functions</a></li>
+</ul>
+
+
+<h2>Modules</h2>
+<ul class="nowrap">
+  <li><a href="../modules/PointsTable.html">PointsTable</a></li>
+  <li><strong>StatsTable</strong></li>
+</ul>
+
+</div>
+
+<div id="content">
+
+<h1>Module <code>StatsTable</code></h1>
+<p>This Module creates a table for stats of a tournament.</p>
+<p></p>
+
+
+<h2><a href="#Functions">Functions</a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#printHeader">printHeader (name, icon)</a></td>
+	<td class="summary">Create the header row
+ Creates the header row html node</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#printTable">printTable (name, icon, rows)</a></td>
+	<td class="summary">Create the rest of the table
+ Creates all the html table rows nodes except the header and the combined rows</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#printRow">printRow (htmlTable, icon, row)</a></td>
+	<td class="summary">Create a single html table row
+ Creates a single html table row to the provided html table node</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#printCombinedRow">printCombinedRow (htmlTable, row)</a></td>
+	<td class="summary">Create the combined row
+ Creates the combined row which adds up the points in each column</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#p.main">p.main (frame)</a></td>
+	<td class="summary">The entry point of the Module</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#getRows">getRows (args)</a></td>
+	<td class="summary">Divides arguments to a table
+ Divides arguments into a table of rows, each row is a table of data that's required to construct the html node of this row</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#calcPerStats">calcPerStats (rows)</a></td>
+	<td class="summary">Calculates the per game per player stats using the table data</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#calcMaximas">calcMaximas (rows)</a></td>
+	<td class="summary">Calculate the maximum number in each row
+ Calculate the maximum number in each row</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#fixRow">fixRow (row)</a></td>
+	<td class="summary">Fix the formatting of some rows
+ Formats some of the rows</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#formatDec">formatDec (num, len)</a></td>
+	<td class="summary">Formats a decimal to have a specific number of decimal places</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#fixOrder">fixOrder (row)</a></td>
+	<td class="summary">Reorders cells in a row</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#calcCombinedStats">calcCombinedStats (rows)</a></td>
+	<td class="summary">Calculates the combined stats of the whole table.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#protectedExpansion">protectedExpansion (frame, title, args)</a></td>
+	<td class="summary">Safely expands a template.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#expandTemplate">expandTemplate (frame, title, args)</a></td>
+	<td class="summary">Expands a template.</td>
+	</tr>
+</table>
+
+<br/>
+<br/>
+
+
+    <h2 class="section-header "><a name="Functions"></a>Functions</h2>
+
+    <dl class="function">
+    <dt>
+    <a name = "printHeader"></a>
+    <strong>printHeader (name, icon)</strong>
+    </dt>
+    <dd>
+    Create the header row
+ Creates the header row html node
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">name</span>
+         string - the name of the tournament
+        </li>
+        <li><span class="parameter">icon</span>
+         string - the icon of the tournament (in html code)
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        a node - html table node
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "printTable"></a>
+    <strong>printTable (name, icon, rows)</strong>
+    </dt>
+    <dd>
+    Create the rest of the table
+ Creates all the html table rows nodes except the header and the combined rows
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">name</span>
+         string - the name of the tournament
+        </li>
+        <li><span class="parameter">icon</span>
+         string - the icon in the header and each row (in html code)
+        </li>
+        <li><span class="parameter">rows</span>
+         table - the rows of the table
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        a string - expanded html div that includes the html table
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "printRow"></a>
+    <strong>printRow (htmlTable, icon, row)</strong>
+    </dt>
+    <dd>
+    Create a single html table row
+ Creates a single html table row to the provided html table node
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">htmlTable</span>
+         node - the html table node to insert the html table row to
+        </li>
+        <li><span class="parameter">icon</span>
+         string - the icon of the row (in html code)
+        </li>
+        <li><span class="parameter">row</span>
+         table
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        nil
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "printCombinedRow"></a>
+    <strong>printCombinedRow (htmlTable, row)</strong>
+    </dt>
+    <dd>
+    Create the combined row
+ Creates the combined row which adds up the points in each column
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">htmlTable</span>
+         node - the html node to add the table row to
+        </li>
+        <li><span class="parameter">row</span>
+         table - the row to add to the table
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        nil
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "p.main"></a>
+    <strong>p.main (frame)</strong>
+    </dt>
+    <dd>
+    The entry point of the Module
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">frame</span>
+
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "getRows"></a>
+    <strong>getRows (args)</strong>
+    </dt>
+    <dd>
+    Divides arguments to a table
+ Divides arguments into a table of rows, each row is a table of data that's required to construct the html node of this row
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">args</span>
+         table - the arguments provided to the template
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        table - the divided rows
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "calcPerStats"></a>
+    <strong>calcPerStats (rows)</strong>
+    </dt>
+    <dd>
+    Calculates the per game per player stats using the table data
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">rows</span>
+         table - the table which has the rows' data
+ return table - the table after adding the per player per game stats to it
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "calcMaximas"></a>
+    <strong>calcMaximas (rows)</strong>
+    </dt>
+    <dd>
+    Calculate the maximum number in each row
+ Calculate the maximum number in each row
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">rows</span>
+         table - the table which has the rows' data
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        nil
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "fixRow"></a>
+    <strong>fixRow (row)</strong>
+    </dt>
+    <dd>
+    Fix the formatting of some rows
+ Formats some of the rows
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">row</span>
+         table - the row to fix the formatting of
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        nil
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "formatDec"></a>
+    <strong>formatDec (num, len)</strong>
+    </dt>
+    <dd>
+    Formats a decimal to have a specific number of decimal places
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">num</span>
+         number - the number to format
+        </li>
+        <li><span class="parameter">len</span>
+         number - the number of decimal places
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        string - the formatted number in a string container
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "fixOrder"></a>
+    <strong>fixOrder (row)</strong>
+    </dt>
+    <dd>
+    Reorders cells in a row
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">row</span>
+         table - the row to reorder
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        nil
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "calcCombinedStats"></a>
+    <strong>calcCombinedStats (rows)</strong>
+    </dt>
+    <dd>
+    Calculates the combined stats of the whole table.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">rows</span>
+         table
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        a table - the table with the combined stats row added
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "protectedExpansion"></a>
+    <strong>protectedExpansion (frame, title, args)</strong>
+    </dt>
+    <dd>
+    Safely expands a template.
+ Expands a template while making sure a missing template doesn't stop the code execution.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">frame</span>
+         frame
+        </li>
+        <li><span class="parameter">title</span>
+         string
+        </li>
+        <li><span class="parameter">args</span>
+         table
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        a string value - the expansion if exists, else error message
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "expandTemplate"></a>
+    <strong>expandTemplate (frame, title, args)</strong>
+    </dt>
+    <dd>
+    Expands a template.
+ Expands a template using a frame and returns the result of the expansion.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">frame</span>
+         frame
+        </li>
+        <li><span class="parameter">title</span>
+         string
+        </li>
+        <li><span class="parameter">args</span>
+         table
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        a string value - the expanded template
+    </ol>
+
+
+
+
+</dd>
+</dl>
+
+
+</div> <!-- id="content" -->
+</div> <!-- id="main" -->
+<div id="about">
+<i>generated by <a href="http://github.com/stevedonovan/LDoc">LDoc 1.4.6</a></i>
+<i style="float:right;">Last updated 2020-06-06 12:48:41 </i>
+</div> <!-- id="about" -->
+</div> <!-- id="container" -->
+</body>
+</html>

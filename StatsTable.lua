@@ -1,3 +1,5 @@
+---- This Module creates a table for stats of a tournament.
+
 local p = {} --p stands for package
 
 local getArgs = require('Module:Arguments').getArgs
@@ -7,7 +9,7 @@ for m = 1, 12, 1 do
     maximas[m] = 0
 end
 
----- Create the header row
+--- Create the header row
 -- Creates the header row html node
 -- @param name string - the name of the tournament
 -- @param icon string - the icon of the tournament (in html code)
@@ -67,6 +69,7 @@ end
 -- Creates a single html table row to the provided html table node
 -- @param htmlTable node - the html table node to insert the html table row to
 -- @param icon string - the icon of the row (in html code)
+-- @param row table
 -- @return nil
 function printRow(htmlTable, icon, row)
     local bold = {}
@@ -332,7 +335,7 @@ end
 --- Safely expands a template.
 -- Expands a template while making sure a missing template doesn't stop the code execution.
 -- @param frame frame
--- @param tile string
+-- @param title string
 -- @param args table
 -- @return a string value - the expansion if exists, else error message
 function protectedExpansion(frame, title, args)

@@ -1,11 +1,4 @@
--- TODO
----- Currently None
--- Expanded Templates
----- https://liquipedia.net/rocketleague/Template:Team
----- https://liquipedia.net/rocketleague/Template:Flag/country
----- https://liquipedia.net/rocketleague/Template:Color
----- https://liquipedia.net/rocketleague/Template:Medal|n
----- https://liquipedia.net/rocketleague/Template:Ordinal/n
+---- This Module creates a table that shows the points of teams/players in a point system tournament.
 
 local p = {} --p stands for package
 
@@ -46,6 +39,7 @@ end
 -- Creates the html Table.
 -- @param frame frame
 -- @param args table - the template parameters
+-- @param entities table
 -- @return mw.html object
 function makeTable(frame, args, entities)
     local htmlTable = mw.html.create('table')
@@ -103,18 +97,18 @@ function makeTable(frame, args, entities)
     local ent = string.sub(string.lower(entities), 1, 1)
     local data = fetchData(args, numCols, ent, frame)
     -- create the table rows
-    ---- counters to get the correct position of each player
+    --- counters to get the correct position of each player
     local appearantPlace = 1
     local actualPlace = 0
     local prevPoints = -1
-    ---- placeholders
+    --- placeholders
     local eData
     local td
     local positionData
-    ---- start looping the rows and use the data to create HTML
-    ------ the number of entities to stop showing completely at
+    --- start looping the rows and use the data to create HTML
+    ---- the number of entities to stop showing completely at
     local num_players = getNum(args['removeafter'], #data)
-    ------ the number of entities to collpase after
+    ---- the number of entities to collpase after
     if num_players > 12 then
         htmlTable:addClass('prizepooltable'):addClass('collapsed'):attr('data-cutafter', getNum(args['cutafter'], '12'))
     end
@@ -300,7 +294,7 @@ end
 -- similar to Python Dictionary's get().
 -- @param args table - the template arguments
 -- @param index string
--- @parma default string
+-- @param default string
 -- @return a string value
 function getColSafe(args, index, default)
     if args[index] then
@@ -393,7 +387,7 @@ end
 --- Safely expands a template.
 -- Expands a template while making sure a missing template doesn't stop the code execution.
 -- @param frame frame
--- @param tile string
+-- @param title string
 -- @param args table
 -- @return a string value - the expansion if exists, else error message
 function protectedExpansion(frame, title, args)
@@ -416,6 +410,8 @@ function expandTemplate(frame, title, args)
 end
 
 --- Copies a table non-recursively (Shallow Copy)
+-- @param t table
+-- return a copy of the provided table
 function shallow_copy(t)
 	local t2 = {}
 	for k,v in pairs(t) do
