@@ -18,7 +18,7 @@ function p.main(frame)
         if entityStringLower ~= 'players' and entityStringLower ~= 'teams' then
             return 'Invalid value provided for argument "entities", valid values are "Players" and "Teams"'
         else
-            if entityStringLower == 'players' then
+            if entityStringLower == 'players' or entityStringLower == 'p' then
                 entities = 'Players'
             else
                 entities = 'Teams'
@@ -141,8 +141,18 @@ function makeTable(frame, args, entities)
         td:attr('align', 'left')
         -- for players
         if ent == 'p' then
-            local pflag = protectedExpansion(frame, 'flag/'..eData['flag'])
-            td:wikitext(pflag..' '..eData['expandedEntity'])
+            local pflag = eData['flag']
+            local pname = eData['expandedEntity']
+            if args['showteams'] == 'true' then
+                local pteam = eData['playerTeam']
+                if pteam then
+                    td:wikitext(pflag..' '..pname..' '..pteam)
+                else
+                    td:wikitext(pflag..' '..pname)
+                end
+            else
+                td:wikitext(pflag..' '..pname)
+            end
         -- for teams
         else
             td:wikitext(eData['expandedEntity'])
@@ -241,15 +251,29 @@ function fetchData(args, numCols, ent, frame)
         -- for teams the expandedEntity would be an expanded Team template.
         --- for players
         if ent == 'p' then
-            eData['flag'] = args['flag'..currentE] or ''
-            if args['plink'..currentE] then
-                eData['expandedEntity'] = '[['..args['plink'..currentE]..'|'..eData['name']..']]'
+            if eData['name'] == 'tbd' or eData['name'] == 'TBD' then
+                eData['flag'] = '[[File:Space_filler_flag.png|link=]]'
+                eData['expandedEntity'] = protectedExpansion(frame, 'Abbr/TBD')
             else
-                eData['expandedEntity'] = '[['..eData['name']..']]'
+                eData['flag'] = args['flag'..currentE] and protectedExpansion(frame, 'flag/'..args['flag'..currentE]) or ''
+                if args['plink'..currentE] then
+                    eData['expandedEntity'] = '[['..args['plink'..currentE]..'|'..eData['name']..']]'
+                else
+                    eData['expandedEntity'] = '[['..eData['name']..']]'
+                end
+            end
+            if args['showteams'] == 'true' then
+                if args['p'..currentE..'team'] then
+                    eData['playerTeam'] = protectedExpansion(frame, 'teamPart/'..args['p'..currentE..'team'])
+                end
             end
         --- for teams
         else
-            eData['expandedEntity'] = protectedExpansion(frame, 'Team', {eData['name']})
+            if string.lower(eData['name']) == 'tbd' then
+                eData['expandedEntity'] = '[[File:Logo_filler_std.png|link=]] '..protectedExpansion(frame, 'Abbr/TBD')
+            else
+                eData['expandedEntity'] = protectedExpansion(frame, 'Team', {eData['name']})
+            end
         end
         -- for both
         eData['total'] = total
