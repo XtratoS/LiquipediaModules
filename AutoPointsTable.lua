@@ -29,37 +29,23 @@ function p.main(frame)
     local pointsPropertyName = args['pointsPropertyName'] and args['pointsPropertyName'] or 'prizepoints'
     -- fetching data
     local tournaments, deductions = getTournamentArgs(args)
-    ---- expanding arguments provided by detailed team template
+    -- expanding arguments provided by detailed team template
     args = expandSubTemplates(args)
-    ---- entities is a table that contains names of teams or people as well as their aliases
+    -- entities is a table that contains names of teams or people as well as their aliases
     local entities = getEntities(entityType, args, #tournaments)
-    ---- entitiesRows will contain the htmlTable rows that contain an entity and their corresponding points for each event
+    -- entitiesRows will contain the htmlTable rows that contain an entity and their corresponding points for each event
     -- local entitiesRows = {}
 
     data = {}
     for i, entity in pairs(entities) do
-        local rowData = entityRowQuery(entity, pointsPropertyName, tournaments, deductions)
+        local rowData = entityRowQuery(frame, entity, pointsPropertyName, tournaments, deductions)
         rowData['entity'] = {name = entity['name']}
         data[i] = rowData
     end
-    ---- sort teams by points
-    table.sort(data, function(a, b) return a['total']['totalPoints'] > b['total']['totalPoints'] end)
     
-    ---- fetch custom data arguments
-    -- local entityNames = {}
-    -- for i, row in pairs(data) do
-    --     entityNames[i] = row['entity']['name']
-    -- end
-    -- local cssArgs = {}
-    ---- attach the styling data to the main data
+    -- attach the styling data to the main data
     for i, entity in pairs(entities) do
         local name = entity['name']
-        if args['pbg'..i] then
-            if not data[i]['cssArgs'] then
-                data[i]['cssArgs'] = {}
-            end
-            data[i]['cssArgs']['c1bg'] = args['pbg'..i]
-        end
         for key, val in pairs(args) do
             if string.find(key, name) then
                 if not data[i]['cssArgs'] then
@@ -70,8 +56,22 @@ function p.main(frame)
         end
     end
 
+    -- sort teams by points
+    table.sort(data, function(a, b) return a['total']['totalPoints'] > b['total']['totalPoints'] end)
+
+    -- add the pbg
+    for i, entity in pairs(entities) do
+        local name = entity['name']
+        if args['pbg'..i] then
+            if not data[i]['cssArgs'] then
+                data[i]['cssArgs'] = {}
+            end
+            data[i]['cssArgs']['bg1'] = args['pbg'..i]
+        end
+    end
+
     -- rendering
-    ---- table creation
+    -- table creation
     local responsiveWrapper = mw.html.create('div')
     responsiveWrapper:addClass('table-responsive')
     local tableWrapper = responsiveWrapper:tag('div')
@@ -85,14 +85,14 @@ function p.main(frame)
 		:addClass('wikitable')
 		:css('text-align', 'center')
 		:css('margin', '0px')
-    ---- headers
+    -- headers
 	if args['customheaders'] then
         htmlTable:node(args['customheaders'])
 	else
 		htmlTable:node(makeTableHeaders(frame, entityType, tournaments, deductions))
     end
     
-    ---- rows
+    -- rows
     local realPos = 0
     for i, row in pairs(data) do
         realPos = realPos + 1
@@ -250,8 +250,8 @@ function makeTableHeaders(frame, entityType, tournaments, deductions)
         if type(tournament) == 'table' then
             local headerArgs = {
                 title = tournament['shortName'],
-                ['translate-x'] = 2,
-                ['translate-y'] = 40,
+                ['translate-x'] = 1.5,
+                ['translate-y'] = 41,
                 ['max-width'] = 50,
                 ['padding-left'] = 29,
                 ['div-width'] = math.ceil(height*1.415) + 30,
@@ -276,6 +276,7 @@ end
 
 --- Performs required queries to get entity points.
 -- This function performs the required smw ask queries to get the points of an entity gained in a series of tournaments.
+-- @param frame frame
 -- @param table entity
 -- @param string pointsPropertyName
 -- @param table tournaments - a table containing tournament data
@@ -287,7 +288,7 @@ end
 -- @return table prettyData.tournament - a reference to a table (the tournament/deduction which is represented by this data entry)
 -- @return number prettyData.points - the points of the entity in this entry
 -- @return table prettyData.total - a table containing the total points of this entity
-function entityRowQuery(entity, pointsPropertyName, tournaments, deductions)
+function entityRowQuery(frame, entity, pointsPropertyName, tournaments, deductions)
     local prettyData = {}
     local totalPoints = 0
     local originalEntityName = entity['name']
@@ -320,7 +321,7 @@ function entityRowQuery(entity, pointsPropertyName, tournaments, deductions)
             else
                 prettyData[fIndex] = {
                     tournament = tournament,
-                    points = 'dnp'
+                    points = protectedExpansion(frame, 'Abbr/DNP')
                 }
             end
             fIndex = fIndex + 1
@@ -361,13 +362,13 @@ end
 function styleItem(item, args, c)
     if args == nil then return item end
 
-    if args['allbg'] then
-        item:css('background-color', args['allbg'])
+    if args['bg'] then
+        item:css('background-color', args['bg'])
     end
-    if args['allfg'] then
-        item:css('color', args['allfg'])
+    if args['fg'] then
+        item:css('color', args['fg'])
     end
-    if args['allbold'] then
+    if args['bold'] then
         item:css('font-weight', 'bold')
     end
 
