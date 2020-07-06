@@ -102,8 +102,7 @@ function p.main(frame)
         row['position'] = {
             position = realPos
         }
-        local entity = row['entity']['name']
-        htmlTable:node(renderRow(frame, entity, entityType, row))
+        htmlTable:node(renderRow(frame, entityType, row))
     end
     
     htmlTable:done()
@@ -131,6 +130,7 @@ function getTournamentArgs(args)
         if args['deductions'..i] then
             deductions[i] = {
                 index = i,
+                tournamentName = args['tournament'..i..'name'],
                 shortName = args['deductions'..i],
                 fullName = args['deductions'..i],
                 type = 'deduction'
@@ -321,7 +321,7 @@ function entityRowQuery(frame, entity, pointsPropertyName, tournaments, deductio
             else
                 prettyData[fIndex] = {
                     tournament = tournament,
-                    points = protectedExpansion(frame, 'Abbr/DNP')
+                    points = '-'
                 }
             end
             fIndex = fIndex + 1
@@ -388,11 +388,11 @@ end
 --- Renders an html row from row arguments
 -- Renders an html tr element from arguments table
 -- @params frame frame
--- @param table entity
--- @param string entity
+-- @param string entityType
 -- @param table rowArgs
 -- @return mw.html tr - table row represented by an mw.html object
-function renderRow(frame, entity, entityType, rowArgs)
+function renderRow(frame, entityType, rowArgs)
+    local entityName = rowArgs['entity']['name']
     -- row
     local tr = mw.html.create('tr')
     -- position cell
@@ -402,7 +402,7 @@ function renderRow(frame, entity, entityType, rowArgs)
     -- entity cell
     td = tr:tag('td')
     if entityType == 'team' then
-        expandedEntity = protectedExpansion(frame, 'Team', {entity})
+        expandedEntity = protectedExpansion(frame, 'Team', {entityName})
     end
     td:css('text-align', 'left'):wikitext(expandedEntity)
     styleItem(td, rowArgs['cssArgs'], 2):done()
@@ -428,7 +428,9 @@ function renderRow(frame, entity, entityType, rowArgs)
                         local label
                         if cell['points'] > 0 then
                             label = protectedExpansion(frame, 'Popup', {
-                                label = -cell['points']
+                                label = -cell['points'],
+                                title = 'Point Deductions ('..cell['tournament']['tournamentName']..')',
+                                content = frame:preprocess('{{#lst:{{FULLPAGENAME}}|'..entityName..'-c'..c..'}}')
                             })
                         else
                             label = ''
