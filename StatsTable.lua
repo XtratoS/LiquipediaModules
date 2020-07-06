@@ -47,8 +47,8 @@ function printHeader(name, icon)
     return htmlTable
 end
 
----- Create the rest of the table
--- Creates all the html table rows nodes except the header and the combined rows
+--- Create the rest of the table.
+-- Creates all the html table rows nodes except the header and the combined rows.
 -- @param name string - the name of the tournament
 -- @param icon string - the icon in the header and each row (in html code)
 -- @param rows table - the rows of the table
@@ -65,8 +65,8 @@ function printTable(name, icon, rows)
     return div
 end
 
----- Create a single html table row
--- Creates a single html table row to the provided html table node
+--- Create a single html table row.
+-- Creates a single html table row to the provided html table node.
 -- @param htmlTable node - the html table node to insert the html table row to
 -- @param icon string - the icon of the row (in html code)
 -- @param row table
@@ -106,8 +106,8 @@ function printRow(htmlTable, icon, row)
     end
 end
 
----- Create the combined row
--- Creates the combined row which adds up the points in each column
+--- Create the combined row.
+-- Creates the combined row which adds up the points in each column.
 -- @param htmlTable node - the html node to add the table row to
 -- @param row table - the row to add to the table
 -- @return nil
@@ -137,7 +137,10 @@ function printCombinedRow(htmlTable, row)
     tr:done()
 end
 
----- The entry point of the Module
+--- The entry point of the Module.
+-- The entry point of the Module.
+-- @param frame frame
+-- @return string html code constructing the table
 function p.main(frame)
     local args = getArgs(frame)
     local error = mw.html.create('div')
@@ -187,8 +190,8 @@ local argnames = {
     'totalot'
 }
 
----- Divides arguments to a table
--- Divides arguments into a table of rows, each row is a table of data that's required to construct the html node of this row
+--- Divides arguments to a table.
+-- Divides arguments into a table of rows, each row is a table of data that's required to construct the html node of this row.
 -- @param args table - the arguments provided to the template
 -- @return table - the divided rows
 function getRows(args)
@@ -219,7 +222,8 @@ function getRows(args)
     return rows
 end
 
----- Calculates the per game per player stats using the table data
+--- Calculates the per game per player stats using the table data.
+-- Calculates the per game per player stats using the table data.
 -- @param rows table - the table which has the rows' data
 -- return table - the table after adding the per player per game stats to it
 function calcPerStats(rows)
@@ -242,8 +246,8 @@ function calcPerStats(rows)
     return rows
 end
 
----- Calculate the maximum number in each row
----- Calculate the maximum number in each row
+--- Calculate the maximum number in each row.
+-- Calculate the maximum number in each row.
 -- @param rows table - the table which has the rows' data
 -- @return nil
 function calcMaximas(rows)
@@ -259,7 +263,8 @@ function calcMaximas(rows)
     end
 end
 
----- Fix the formatting of some rows
+--- Fix the formatting of some rows.
+-- Fix the formatting of some rows.
 -- Formats some of the rows
 -- @param row table - the row to fix the formatting of
 -- @return nil
@@ -274,7 +279,8 @@ function fixRow(row)
     end
 end
 
----- Formats a decimal to have a specific number of decimal places
+--- Formats a decimal to have a specific number of decimal places.
+-- Formats a decimal to have a specific number of decimal places.
 -- @param num number - the number to format
 -- @param len number - the number of decimal places
 -- @return string - the formatted number in a string container
@@ -290,7 +296,8 @@ function formatDec(num, len)
     return strret
 end
 
----- Reorders cells in a row
+--- Reorders cells in a row.
+-- Reorders cells in a row.
 -- @param row table - the row to reorder
 -- @return nil
 function fixOrder(row)
@@ -312,7 +319,8 @@ function fixOrder(row)
     end
 end
 
----- Calculates the combined stats of the whole table.
+--- Calculates the combined stats of the whole table.
+-- Calculates the combined stats of the whole table.
 -- @param rows table
 -- @return a table - the table with the combined stats row added
 function calcCombinedStats(rows)
