@@ -1,0 +1,561 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<head>
+    <title>Reference</title>
+    <link rel="stylesheet" href="../ldoc.css" type="text/css" />
+</head>
+<body>
+
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+
+<div id="main">
+
+
+<!-- Menu -->
+
+<div id="navigation">
+<br/>
+<h1>ldoc</h1>
+
+<ul>
+  <li><a href="../index.html">Index</a></li>
+</ul>
+
+<h2>Contents</h2>
+<ul>
+<li><a href="#Functions">Functions</a></li>
+<li><a href="#Tables">Tables</a></li>
+<li><a href="#Fields">Fields</a></li>
+</ul>
+
+
+<h2>Modules</h2>
+<ul class="nowrap">
+  <li><strong>AutoPointsTable</strong></li>
+  <li><a href="../modules/PointsTable.html">PointsTable</a></li>
+  <li><a href="../modules/StatsTable.html">StatsTable</a></li>
+  <li><a href="../modules/SubArgumentFetcher.html">SubArgumentFetcher</a></li>
+</ul>
+
+</div>
+
+<div id="content">
+
+<h1>Module <code>AutoPointsTable</code></h1>
+<p>This Module creates a table that shows the points of teams/players in a point system tournament (using subobjects defined in prizepool templates), this was mainly created for the new Circuit System starting RLCS Season X.</p>
+<p></p>
+
+
+<h2><a href="#Functions">Functions</a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#p.main">p.main (frame)</a></td>
+	<td class="summary">Entry point.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#getTournamentArgs">getTournamentArgs (table)</a></td>
+	<td class="summary">Returns the tournaments in this template.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#tournaments:getByFullName">tournaments:getByFullName (fullName)</a></td>
+	<td class="summary">Returns a tournament given its full name
+ Returns a tournament given its full name</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#getEntities">getEntities (entityType, args, numTourn)</a></td>
+	<td class="summary">Returns the entities from args.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#expandSubTemplates">expandSubTemplates (args)</a></td>
+	<td class="summary">Expands the sub-templates' args.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#split">split (string, string)</a></td>
+	<td class="summary">Splits string a by a delim.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#makeTableHeaders">makeTableHeaders (frame, string, table, table)</a></td>
+	<td class="summary">Creates the html code required to make the table header.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#entityRowQuery">entityRowQuery (table, string, table, string, string, string, table)</a></td>
+	<td class="summary">Performs required queries to get entity points.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#styleItem">styleItem (object, table, number)</a></td>
+	<td class="summary">Styles the background, forground and font-weight of an element
+ Adds css styling for background-color, color and font-weight of an mw.html element</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#renderRow">renderRow (table, string, table)</a></td>
+	<td class="summary">Renders an html row from row arguments
+ Renders an html tr element from arguments table</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#protectedExpansion">protectedExpansion (frame, string, table)</a></td>
+	<td class="summary">Safely expands a template.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#expandTemplate">expandTemplate (frame, string, table)</a></td>
+	<td class="summary">Expands a template.</td>
+	</tr>
+</table>
+<h2><a href="#Tables">Tables</a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#data">data</a></td>
+	<td class="summary">entitiesRows will contain the htmlTable rows that contain an entity and their corresponding points for each event
+ local entitiesRows = {}</td>
+	</tr>
+</table>
+<h2><a href="#Fields">Fields</a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#args">args</a></td>
+	<td class="summary">expanding arguments provided by detailed team template</td>
+	</tr>
+</table>
+
+<br/>
+<br/>
+
+
+    <h2 class="section-header "><a name="Functions"></a>Functions</h2>
+
+    <dl class="function">
+    <dt>
+    <a name = "p.main"></a>
+    <strong>p.main (frame)</strong>
+    </dt>
+    <dd>
+    Entry point.
+ The entry point of this Module.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">frame</span>
+         frame
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        mw.html div tableWrapper
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "getTournamentArgs"></a>
+    <strong>getTournamentArgs (table)</strong>
+    </dt>
+    <dd>
+    Returns the tournaments in this template.
+ Returns table,table - two tables, one containing the names of the tournaments provided to this template, and the second one for indexing purposes.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">table</span>
+         args - the arguments provided to this template
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        table, table tournaments, deductions - two tables containing main data of tournaments and deductions
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "tournaments:getByFullName"></a>
+    <strong>tournaments:getByFullName (fullName)</strong>
+    </dt>
+    <dd>
+    Returns a tournament given its full name
+ Returns a tournament given its full name
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">fullName</span>
+         string
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        tournament table
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "getEntities"></a>
+    <strong>getEntities (entityType, args, numTourn)</strong>
+    </dt>
+    <dd>
+    Returns the entities from args.
+ Returns the table of entities provided by the positional arguments to this module.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">entityType</span>
+         string - type of entities
+        </li>
+        <li><span class="parameter">args</span>
+         table - the arguments provided to this template
+        </li>
+        <li><span class="parameter">numTourn</span>
+         number - the number of tournaments to check aliases for
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        entities table - a table that contains the entities with their aliases
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "expandSubTemplates"></a>
+    <strong>expandSubTemplates (args)</strong>
+    </dt>
+    <dd>
+    Expands the sub-templates' args.
+ Expands the args provided to any of the sub-templates to the args of the main template changing the keys accordingly.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">args</span>
+         table - the original template arguments
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        table - the arguments after adding the expanded arguments
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "split"></a>
+    <strong>split (string, string)</strong>
+    </dt>
+    <dd>
+    Splits string a by a delim.
+ Splits string a by a delimiter and returns a table of all resulting words.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">string</span>
+         delim
+        </li>
+        <li><span class="parameter">string</span>
+         delim
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        table words - a table containing the split up words
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "makeTableHeaders"></a>
+    <strong>makeTableHeaders (frame, string, table, table)</strong>
+    </dt>
+    <dd>
+    Creates the html code required to make the table header.
+ This function creates the html code required to make the table header, actually expands another template that contains hard-coded html with some variables, as the headers hardly change.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">frame</span>
+         frame
+        </li>
+        <li><span class="parameter">string</span>
+         entityType
+        </li>
+        <li><span class="parameter">table</span>
+         deductions
+        </li>
+        <li><span class="parameter">table</span>
+         deductions
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        mw.html row tr - the expanded mw.html table row for the headers
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "entityRowQuery"></a>
+    <strong>entityRowQuery (table, string, table, string, string, string, table)</strong>
+    </dt>
+    <dd>
+    Performs required queries to get entity points.
+ This function performs the required smw ask queries to get the points of an entity gained in a series of tournaments.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">table</span>
+         deductions - a table containing data regarding the deductions columns
+        </li>
+        <li><span class="parameter">string</span>
+         tournament.type - 'tournament'
+        </li>
+        <li><span class="parameter">table</span>
+         deductions - a table containing data regarding the deductions columns
+        </li>
+        <li><span class="parameter">string</span>
+         tournament.type - 'tournament'
+        </li>
+        <li><span class="parameter">string</span>
+         tournament.type - 'tournament'
+        </li>
+        <li><span class="parameter">string</span>
+         tournament.type - 'tournament'
+        </li>
+        <li><span class="parameter">table</span>
+         deductions - a table containing data regarding the deductions columns
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+        <li>
+        table prettyData - a table containing required data to create a row of entity points</li>
+        <li>
+        table prettyData.tournament - a reference to a table (the tournament/deduction which is represented by this data entry)</li>
+        <li>
+        number prettyData.points - the points of the entity in this entry</li>
+        <li>
+        table prettyData.total - a table containing the total points of this entity</li>
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "styleItem"></a>
+    <strong>styleItem (object, table, number)</strong>
+    </dt>
+    <dd>
+    Styles the background, forground and font-weight of an element
+ Adds css styling for background-color, color and font-weight of an mw.html element
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">object</span>
+         item - mw.html item
+        </li>
+        <li><span class="parameter">table</span>
+         args - css styling arguments
+        </li>
+        <li><span class="parameter">number</span>
+         c - the column number
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        object item - the item after applying the styling rules
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "renderRow"></a>
+    <strong>renderRow (table, string, table)</strong>
+    </dt>
+    <dd>
+    Renders an html row from row arguments
+ Renders an html tr element from arguments table
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">table</span>
+         rowArgs
+        </li>
+        <li><span class="parameter">string</span>
+         entity
+        </li>
+        <li><span class="parameter">table</span>
+         rowArgs
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        mw.html tr - table row represented by an mw.html object
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "protectedExpansion"></a>
+    <strong>protectedExpansion (frame, string, table)</strong>
+    </dt>
+    <dd>
+    Safely expands a template.
+ Expands a template while making sure a missing template doesn't stop the code execution.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">frame</span>
+         frame
+        </li>
+        <li><span class="parameter">string</span>
+         title
+        </li>
+        <li><span class="parameter">table</span>
+         args
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        a string value - the expansion if exists, else error message
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "expandTemplate"></a>
+    <strong>expandTemplate (frame, string, table)</strong>
+    </dt>
+    <dd>
+    Expands a template.
+ Expands a template using a frame and returns the result of the expansion.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">frame</span>
+         frame
+        </li>
+        <li><span class="parameter">string</span>
+         title
+        </li>
+        <li><span class="parameter">table</span>
+         args
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        a string value - the expanded template
+    </ol>
+
+
+
+
+</dd>
+</dl>
+    <h2 class="section-header "><a name="Tables"></a>Tables</h2>
+
+    <dl class="function">
+    <dt>
+    <a name = "data"></a>
+    <strong>data</strong>
+    </dt>
+    <dd>
+    entitiesRows will contain the htmlTable rows that contain an entity and their corresponding points for each event
+ local entitiesRows = {}
+
+
+
+
+
+
+
+</dd>
+</dl>
+    <h2 class="section-header "><a name="Fields"></a>Fields</h2>
+
+    <dl class="function">
+    <dt>
+    <a name = "args"></a>
+    <strong>args</strong>
+    </dt>
+    <dd>
+    expanding arguments provided by detailed team template
+
+
+
+
+
+
+
+</dd>
+</dl>
+
+
+</div> <!-- id="content" -->
+</div> <!-- id="main" -->
+<div id="about">
+<i>generated by <a href="http://github.com/stevedonovan/LDoc">LDoc 1.4.6</a></i>
+<i style="float:right;">Last updated 2020-07-06 05:37:22 </i>
+</div> <!-- id="about" -->
+</div> <!-- id="container" -->
+</body>
+</html>
