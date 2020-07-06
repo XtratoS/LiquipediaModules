@@ -1,5 +1,4 @@
----- This Module creates a table that shows the points of teams/players in a point system tournament.
----- This was mainly created for the new Circuit System starting RLCS Season X.
+---- This Module creates a table that shows the points of teams/players in a point system tournament (using subobjects defined in prizepool templates), this was mainly created for the new Circuit System starting RLCS Season X.
 
 local p = {} --p stands for package
 
