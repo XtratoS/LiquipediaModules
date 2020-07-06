@@ -62,49 +62,43 @@
 	</tr>
 	<tr>
 	<td class="name" nowrap><a href="#printTable">printTable (name, icon, rows)</a></td>
-	<td class="summary">Create the rest of the table
- Creates all the html table rows nodes except the header and the combined rows</td>
+	<td class="summary">Create the rest of the table.</td>
 	</tr>
 	<tr>
 	<td class="name" nowrap><a href="#printRow">printRow (htmlTable, icon, row)</a></td>
-	<td class="summary">Create a single html table row
- Creates a single html table row to the provided html table node</td>
+	<td class="summary">Create a single html table row.</td>
 	</tr>
 	<tr>
 	<td class="name" nowrap><a href="#printCombinedRow">printCombinedRow (htmlTable, row)</a></td>
-	<td class="summary">Create the combined row
- Creates the combined row which adds up the points in each column</td>
+	<td class="summary">Create the combined row.</td>
 	</tr>
 	<tr>
 	<td class="name" nowrap><a href="#p.main">p.main (frame)</a></td>
-	<td class="summary">The entry point of the Module</td>
+	<td class="summary">The entry point of the Module.</td>
 	</tr>
 	<tr>
 	<td class="name" nowrap><a href="#getRows">getRows (args)</a></td>
-	<td class="summary">Divides arguments to a table
- Divides arguments into a table of rows, each row is a table of data that's required to construct the html node of this row</td>
+	<td class="summary">Divides arguments to a table.</td>
 	</tr>
 	<tr>
 	<td class="name" nowrap><a href="#calcPerStats">calcPerStats (rows)</a></td>
-	<td class="summary">Calculates the per game per player stats using the table data</td>
+	<td class="summary">Calculates the per game per player stats using the table data.</td>
 	</tr>
 	<tr>
 	<td class="name" nowrap><a href="#calcMaximas">calcMaximas (rows)</a></td>
-	<td class="summary">Calculate the maximum number in each row
- Calculate the maximum number in each row</td>
+	<td class="summary">Calculate the maximum number in each row.</td>
 	</tr>
 	<tr>
 	<td class="name" nowrap><a href="#fixRow">fixRow (row)</a></td>
-	<td class="summary">Fix the formatting of some rows
- Formats some of the rows</td>
+	<td class="summary">Fix the formatting of some rows.</td>
 	</tr>
 	<tr>
 	<td class="name" nowrap><a href="#formatDec">formatDec (num, len)</a></td>
-	<td class="summary">Formats a decimal to have a specific number of decimal places</td>
+	<td class="summary">Formats a decimal to have a specific number of decimal places.</td>
 	</tr>
 	<tr>
 	<td class="name" nowrap><a href="#fixOrder">fixOrder (row)</a></td>
-	<td class="summary">Reorders cells in a row</td>
+	<td class="summary">Reorders cells in a row.</td>
 	</tr>
 	<tr>
 	<td class="name" nowrap><a href="#calcCombinedStats">calcCombinedStats (rows)</a></td>
@@ -161,8 +155,8 @@
     <strong>printTable (name, icon, rows)</strong>
     </dt>
     <dd>
-    Create the rest of the table
- Creates all the html table rows nodes except the header and the combined rows
+    Create the rest of the table.
+ Creates all the html table rows nodes except the header and the combined rows.
 
 
     <h3>Parameters:</h3>
@@ -193,8 +187,8 @@
     <strong>printRow (htmlTable, icon, row)</strong>
     </dt>
     <dd>
-    Create a single html table row
- Creates a single html table row to the provided html table node
+    Create a single html table row.
+ Creates a single html table row to the provided html table node.
 
 
     <h3>Parameters:</h3>
@@ -225,8 +219,8 @@
     <strong>printCombinedRow (htmlTable, row)</strong>
     </dt>
     <dd>
-    Create the combined row
- Creates the combined row which adds up the points in each column
+    Create the combined row.
+ Creates the combined row which adds up the points in each column.
 
 
     <h3>Parameters:</h3>
@@ -254,16 +248,22 @@
     <strong>p.main (frame)</strong>
     </dt>
     <dd>
-    The entry point of the Module
+    The entry point of the Module.
+ The entry point of the Module.
 
 
     <h3>Parameters:</h3>
     <ul>
         <li><span class="parameter">frame</span>
-
+         frame
         </li>
     </ul>
 
+    <h3>Returns:</h3>
+    <ol>
+
+        string html code constructing the table
+    </ol>
 
 
 
@@ -274,8 +274,8 @@
     <strong>getRows (args)</strong>
     </dt>
     <dd>
-    Divides arguments to a table
- Divides arguments into a table of rows, each row is a table of data that's required to construct the html node of this row
+    Divides arguments to a table.
+ Divides arguments into a table of rows, each row is a table of data that's required to construct the html node of this row.
 
 
     <h3>Parameters:</h3>
@@ -300,7 +300,8 @@
     <strong>calcPerStats (rows)</strong>
     </dt>
     <dd>
-    Calculates the per game per player stats using the table data
+    Calculates the per game per player stats using the table data.
+ Calculates the per game per player stats using the table data.
 
 
     <h3>Parameters:</h3>
@@ -321,8 +322,8 @@
     <strong>calcMaximas (rows)</strong>
     </dt>
     <dd>
-    Calculate the maximum number in each row
- Calculate the maximum number in each row
+    Calculate the maximum number in each row.
+ Calculate the maximum number in each row.
 
 
     <h3>Parameters:</h3>
@@ -347,7 +348,8 @@
     <strong>fixRow (row)</strong>
     </dt>
     <dd>
-    Fix the formatting of some rows
+    Fix the formatting of some rows.
+ Fix the formatting of some rows.
  Formats some of the rows
 
 
@@ -373,7 +375,8 @@
     <strong>formatDec (num, len)</strong>
     </dt>
     <dd>
-    Formats a decimal to have a specific number of decimal places
+    Formats a decimal to have a specific number of decimal places.
+ Formats a decimal to have a specific number of decimal places.
 
 
     <h3>Parameters:</h3>
@@ -401,7 +404,8 @@
     <strong>fixOrder (row)</strong>
     </dt>
     <dd>
-    Reorders cells in a row
+    Reorders cells in a row.
+ Reorders cells in a row.
 
 
     <h3>Parameters:</h3>
@@ -427,6 +431,7 @@
     </dt>
     <dd>
     Calculates the combined stats of the whole table.
+ Calculates the combined stats of the whole table.
 
 
     <h3>Parameters:</h3>
@@ -517,7 +522,7 @@
 </div> <!-- id="main" -->
 <div id="about">
 <i>generated by <a href="http://github.com/stevedonovan/LDoc">LDoc 1.4.6</a></i>
-<i style="float:right;">Last updated 2020-07-06 05:37:22 </i>
+<i style="float:right;">Last updated 2020-07-06 08:54:04 </i>
 </div> <!-- id="about" -->
 </div> <!-- id="container" -->
 </body>
