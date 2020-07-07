@@ -40,6 +40,7 @@
 <ul class="nowrap">
   <li><strong>AutoPointsTable</strong></li>
   <li><a href="../modules/PointsTable.html">PointsTable</a></li>
+  <li><a href="../modules/Sponsors.html">Sponsors</a></li>
   <li><a href="../modules/StatsTable.html">StatsTable</a></li>
   <li><a href="../modules/SubArgumentFetcher.html">SubArgumentFetcher</a></li>
 </ul>
@@ -50,7 +51,10 @@
 
 <h1>Module <code>AutoPointsTable</code></h1>
 <p>This Module creates a table that shows the points of teams/players in a point system tournament (using subobjects defined in prizepool templates), this was mainly created for the new Circuit System starting RLCS Season X.</p>
-<p></p>
+<p>
+ Throughout this module, the word 'entity' will be used multiple times, it could just be replaced by 'team' whenever found.
+ This Module is meant to be used for both players and teams, right now it only supports teams, but in some areas in the code, there will be checks to ensure the 'entity' we're dealing with is a team.
+ The HTML Library was used to create the html code produced by this Module: https://www.mediawiki.org/wiki/Extension:Scribunto/Lua_reference_manual#HTML_library</p>
 
 
 <h2><a href="#Functions">Functions</a></h2>
@@ -60,43 +64,88 @@
 	<td class="summary">Entry point.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#getTournamentArgs">getTournamentArgs (table)</a></td>
-	<td class="summary">Returns the tournaments in this template.</td>
+	<td class="name" nowrap><a href="#checkInputArgs">checkInputArgs (table)</a></td>
+	<td class="summary">Checks the input for required arguments.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#tournaments:getByFullName">tournaments:getByFullName (fullName)</a></td>
-	<td class="summary">Returns a tournament given its full name
- Returns a tournament given its full name</td>
+	<td class="name" nowrap><a href="#sortDataByTotalPoints">sortDataByTotalPoints (table, table)</a></td>
+	<td class="summary">Custom sorting function.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#getEntities">getEntities (entityType, args, numTourn)</a></td>
-	<td class="summary">Returns the entities from args.</td>
+	<td class="name" nowrap><a href="#fetchTournamentsData">fetchTournamentsData (table, string, string)</a></td>
+	<td class="summary">Fetches the tournament arguments provided.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#tournaments:getByFullName">tournaments:getByFullName (string)</a></td>
+	<td class="summary">Finds a tournament given its full name.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#fetchEntitiesData">fetchEntitiesData (string, table, number)</a></td>
+	<td class="summary">Fetches the entities data.</td>
 	</tr>
 	<tr>
 	<td class="name" nowrap><a href="#expandSubTemplates">expandSubTemplates (args)</a></td>
 	<td class="summary">Expands the sub-templates' args.</td>
 	</tr>
 	<tr>
+	<td class="name" nowrap><a href="#attachStylingDataToMain">attachStylingDataToMain (table, table, table)</a></td>
+	<td class="summary">Attaches styling data.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#attachPositionBGColorData">attachPositionBGColorData (table, table, table, boolean)</a></td>
+	<td class="summary">Attaches the pbg data to the main data table.</td>
+	</tr>
+	<tr>
 	<td class="name" nowrap><a href="#split">split (string, string)</a></td>
 	<td class="summary">Splits string a by a delim.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#makeTableHeaders">makeTableHeaders (frame, string, table, table)</a></td>
+	<td class="name" nowrap><a href="#makeDefaultTableHeaders">makeDefaultTableHeaders (frame, table, table, number)</a></td>
 	<td class="summary">Creates the html code required to make the table header.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#entityRowQuery">entityRowQuery (frame, table, string, table, string, string, string, table)</a></td>
+	<td class="name" nowrap><a href="#checkTwoLastHeaderColumns">checkTwoLastHeaderColumns (table, number, number)</a></td>
+	<td class="summary">Applies additional special styling for the last two header columns.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#queryRowDataFromSMW">queryRowDataFromSMW (frame, table, table, string, string, string, table)</a></td>
 	<td class="summary">Performs required queries to get entity points.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#styleItem">styleItem (object, table, number)</a></td>
-	<td class="summary">Styles the background, forground and font-weight of an element
- Adds css styling for background-color, color and font-weight of an mw.html element</td>
+	<td class="name" nowrap><a href="#performSMWQuery">performSMWQuery (table, string, string, table, string)</a></td>
+	<td class="summary">Performs a SMW Ask Query.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#renderRow">renderRow (table, string, table)</a></td>
-	<td class="summary">Renders an html row from row arguments
- Renders an html tr element from arguments table</td>
+	<td class="name" nowrap><a href="#getTournamentEntityName">getTournamentEntityName (table, string, number)</a></td>
+	<td class="summary">Fetches the entity name for a specific tournament.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#makeHTMLTable">makeHTMLTable (frame, table, table, table)</a></td>
+	<td class="summary">Creates an html table.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#createTableWrapper">createTableWrapper (number)</a></td>
+	<td class="summary">Creates a div.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#createTableTag">createTableTag (node)</a></td>
+	<td class="summary">Creates a table node.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#addTableHeader">addTableHeader (frame, node, string, table)</a></td>
+	<td class="summary">Adds the table header to the html table.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#renderTableBody">renderTableBody (frame, node, table)</a></td>
+	<td class="summary">Creates the table body.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#styleItem">styleItem (object, table, number)</a></td>
+	<td class="summary">Styles the background, foreground and font-weight of an element.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#renderRow">renderRow (string, table)</a></td>
+	<td class="summary">Renders an html row from row arguments.</td>
 	</tr>
 	<tr>
 	<td class="name" nowrap><a href="#protectedExpansion">protectedExpansion (frame, string, table)</a></td>
@@ -142,18 +191,77 @@
 
 </dd>
     <dt>
-    <a name = "getTournamentArgs"></a>
-    <strong>getTournamentArgs (table)</strong>
+    <a name = "checkInputArgs"></a>
+    <strong>checkInputArgs (table)</strong>
     </dt>
     <dd>
-    Returns the tournaments in this template.
- Returns table,table - two tables, one containing the names of the tournaments provided to this template, and the second one for indexing purposes.
+    Checks the input for required arguments.
+ Checks the input for required arguments and enforces default values if arguments weren't provided.
 
 
     <h3>Parameters:</h3>
     <ul>
         <li><span class="parameter">table</span>
-         args - the arguments provided to this template
+         args
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+        <li>
+        boolean - status (true if required arguments are specified and false otherwise)</li>
+        <li>
+        string - error message if one of the required arguments isn't specified</li>
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "sortDataByTotalPoints"></a>
+    <strong>sortDataByTotalPoints (table, table)</strong>
+    </dt>
+    <dd>
+    Custom sorting function.
+ Sorts the teams by their total points.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">table</span>
+         b
+        </li>
+        <li><span class="parameter">table</span>
+         b
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "fetchTournamentsData"></a>
+    <strong>fetchTournamentsData (table, string, string)</strong>
+    </dt>
+    <dd>
+    Fetches the tournament arguments provided.
+ Fetches the tournaments provided through tournamentX and deductionsX then returns the result in 2 separate tables,
+ one for the tournaments and one for the deductions
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">table</span>
+         args
+        </li>
+        <li><span class="parameter">string</span>
+         args.deductionsX - the name of the deductions column for tournament X (optional) - if not specified, column isn't rendered
+        </li>
+        <li><span class="parameter">string</span>
+         args.deductionsX - the name of the deductions column for tournament X (optional) - if not specified, column isn't rendered
         </li>
     </ul>
 
@@ -169,24 +277,24 @@
 </dd>
     <dt>
     <a name = "tournaments:getByFullName"></a>
-    <strong>tournaments:getByFullName (fullName)</strong>
+    <strong>tournaments:getByFullName (string)</strong>
     </dt>
     <dd>
-    Returns a tournament given its full name
- Returns a tournament given its full name
+    Finds a tournament given its full name.
+
 
 
     <h3>Parameters:</h3>
     <ul>
-        <li><span class="parameter">fullName</span>
-         string
+        <li><span class="parameter">string</span>
+         fullName
         </li>
     </ul>
 
     <h3>Returns:</h3>
     <ol>
 
-        tournament table
+        tournament table - the tournament of name X if exists, otherwise returns nil
     </ol>
 
 
@@ -194,31 +302,31 @@
 
 </dd>
     <dt>
-    <a name = "getEntities"></a>
-    <strong>getEntities (entityType, args, numTourn)</strong>
+    <a name = "fetchEntitiesData"></a>
+    <strong>fetchEntitiesData (string, table, number)</strong>
     </dt>
     <dd>
-    Returns the entities from args.
- Returns the table of entities provided by the positional arguments to this module.
+    Fetches the entities data.
+ Fetches the table of entities provided by the positional arguments to this module, an entity is either a team or a player (case sensitive).
 
 
     <h3>Parameters:</h3>
     <ul>
-        <li><span class="parameter">entityType</span>
-         string - type of entities
+        <li><span class="parameter">string</span>
+         entityType - type of entities (teams or players)
         </li>
-        <li><span class="parameter">args</span>
-         table - the arguments provided to this template
+        <li><span class="parameter">table</span>
+         args - the arguments provided to this template
         </li>
-        <li><span class="parameter">numTourn</span>
-         number - the number of tournaments to check aliases for
+        <li><span class="parameter">number</span>
+         tournamentCount - the number of tournaments to check aliases for
         </li>
     </ul>
 
     <h3>Returns:</h3>
     <ol>
 
-        entities table - a table that contains the entities with their aliases
+        entities table - a table that contains data about entities; their name, type (team or player), aliases and point deductions in any of the tournaments
     </ol>
 
 
@@ -246,6 +354,65 @@
 
         table - the arguments after adding the expanded arguments
     </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "attachStylingDataToMain"></a>
+    <strong>attachStylingDataToMain (table, table, table)</strong>
+    </dt>
+    <dd>
+    Attaches styling data.
+ Attaches the styling data to the main data,
+ uses the entities' names to get the corresponding styling data from the main arguments if they exist,
+ then attaches this data to the given data table.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">table</span>
+         entities - the table that contains the entities data
+        </li>
+        <li><span class="parameter">table</span>
+         entities - the table that contains the entities data
+        </li>
+        <li><span class="parameter">table</span>
+         entities - the table that contains the entities data
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "attachPositionBGColorData"></a>
+    <strong>attachPositionBGColorData (table, table, table, boolean)</strong>
+    </dt>
+    <dd>
+    Attaches the pbg data to the main data table.
+ Attaches the pbg data to the main data table.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">table</span>
+         entities
+        </li>
+        <li><span class="parameter">table</span>
+         entities
+        </li>
+        <li><span class="parameter">table</span>
+         entities
+        </li>
+        <li><span class="parameter">boolean</span>
+         overwrite - whether or not the bg color overwrites the pbg color
+        </li>
+    </ul>
+
 
 
 
@@ -281,8 +448,8 @@
 
 </dd>
     <dt>
-    <a name = "makeTableHeaders"></a>
-    <strong>makeTableHeaders (frame, string, table, table)</strong>
+    <a name = "makeDefaultTableHeaders"></a>
+    <strong>makeDefaultTableHeaders (frame, table, table, number)</strong>
     </dt>
     <dd>
     Creates the html code required to make the table header.
@@ -294,14 +461,14 @@
         <li><span class="parameter">frame</span>
          frame
         </li>
-        <li><span class="parameter">string</span>
-         entityType
-        </li>
         <li><span class="parameter">table</span>
          deductions
         </li>
         <li><span class="parameter">table</span>
          deductions
+        </li>
+        <li><span class="parameter">number</span>
+         headerHeight
         </li>
     </ul>
 
@@ -316,8 +483,40 @@
 
 </dd>
     <dt>
-    <a name = "entityRowQuery"></a>
-    <strong>entityRowQuery (frame, table, string, table, string, string, string, table)</strong>
+    <a name = "checkTwoLastHeaderColumns"></a>
+    <strong>checkTwoLastHeaderColumns (table, number, number)</strong>
+    </dt>
+    <dd>
+    Applies additional special styling for the last two header columns.
+ This function modifies the original provided header arguments, use with caution
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">table</span>
+         headerArgs
+        </li>
+        <li><span class="parameter">number</span>
+         columnCount
+        </li>
+        <li><span class="parameter">number</span>
+         columnCount
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        table headerArgs - the header arguments after modifying them according to the given index
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "queryRowDataFromSMW"></a>
+    <strong>queryRowDataFromSMW (frame, table, table, string, string, string, table)</strong>
     </dt>
     <dd>
     Performs required queries to get entity points.
@@ -331,9 +530,6 @@
         </li>
         <li><span class="parameter">table</span>
          deductions - a table containing data regarding the deductions columns
-        </li>
-        <li><span class="parameter">string</span>
-         tournament.type - 'tournament'
         </li>
         <li><span class="parameter">table</span>
          deductions - a table containing data regarding the deductions columns
@@ -369,12 +565,236 @@
 
 </dd>
     <dt>
+    <a name = "performSMWQuery"></a>
+    <strong>performSMWQuery (table, string, string, table, string)</strong>
+    </dt>
+    <dd>
+    Performs a SMW Ask Query.
+ Performs a SMW Ask Query to get the points of a given entity for a given tournament.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">table</span>
+         tournament
+        </li>
+        <li><span class="parameter">string</span>
+         tournament.fullName
+        </li>
+        <li><span class="parameter">string</span>
+         tournament.fullName
+        </li>
+        <li><span class="parameter">table</span>
+         tournament
+        </li>
+        <li><span class="parameter">string</span>
+         tournament.fullName
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        table queryResult - a table returned by mw.smw.ask() - returns an empty table if no results found
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "getTournamentEntityName"></a>
+    <strong>getTournamentEntityName (table, string, number)</strong>
+    </dt>
+    <dd>
+    Fetches the entity name for a specific tournament.
+ Fetches the entity name for a given tournament using the index of the tournament.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">table</span>
+         entity
+        </li>
+        <li><span class="parameter">string</span>
+         entity.name
+        </li>
+        <li><span class="parameter">number</span>
+         index
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        string - the resolved name of the entity
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "makeHTMLTable"></a>
+    <strong>makeHTMLTable (frame, table, table, table)</strong>
+    </dt>
+    <dd>
+    Creates an html table.
+ Creates an html table wrapped in a div element and fills it with the data provided in the template arguments.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">frame</span>
+         fram
+        </li>
+        <li><span class="parameter">table</span>
+         deductions - a table that contains the deduction columns' data
+        </li>
+        <li><span class="parameter">table</span>
+         deductions - a table that contains the deduction columns' data
+        </li>
+        <li><span class="parameter">table</span>
+         deductions - a table that contains the deduction columns' data
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        node tableWrapper - the node of the parent div which wraps the table node, this node contains all the html that renders the table
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "createTableWrapper"></a>
+    <strong>createTableWrapper (number)</strong>
+    </dt>
+    <dd>
+    Creates a div.
+ Creates a div which wraps the table node to make it mobile friendly.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">number</span>
+         tableWidth - the width of the table node
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        node div - the secondary wrapper which wraps the table and is wrapped inside the primary wrapper, the primary wrapper is the wrapper which should be returned by the main fucntion
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "createTableTag"></a>
+    <strong>createTableTag (node)</strong>
+    </dt>
+    <dd>
+    Creates a table node.
+ Creates the main table node.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">node</span>
+         tableWrapper - the node which wraps this table node
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        node htmlTable
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "addTableHeader"></a>
+    <strong>addTableHeader (frame, node, string, table)</strong>
+    </dt>
+    <dd>
+    Adds the table header to the html table.
+ Adds the table header to the html table.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">frame</span>
+         frame
+        </li>
+        <li><span class="parameter">node</span>
+         htmlTable
+        </li>
+        <li><span class="parameter">string</span>
+         customHeader
+        </li>
+        <li><span class="parameter">table</span>
+         deductions
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        nil
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "renderTableBody"></a>
+    <strong>renderTableBody (frame, node, table)</strong>
+    </dt>
+    <dd>
+    Creates the table body.
+ Creates the table body and attaches it to the provided htmlTable node.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">frame</span>
+         frame
+        </li>
+        <li><span class="parameter">node</span>
+         htmlTable
+        </li>
+        <li><span class="parameter">table</span>
+         data
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        nil
+    </ol>
+
+
+
+
+</dd>
+    <dt>
     <a name = "styleItem"></a>
     <strong>styleItem (object, table, number)</strong>
     </dt>
     <dd>
-    Styles the background, forground and font-weight of an element
- Adds css styling for background-color, color and font-weight of an mw.html element
+    Styles the background, foreground and font-weight of an element.
+ Adds css styling for background-color, color and font-weight of an mw.html element.
 
 
     <h3>Parameters:</h3>
@@ -402,20 +822,17 @@
 </dd>
     <dt>
     <a name = "renderRow"></a>
-    <strong>renderRow (table, string, table)</strong>
+    <strong>renderRow (string, table)</strong>
     </dt>
     <dd>
-    Renders an html row from row arguments
- Renders an html tr element from arguments table
+    Renders an html row from row arguments.
+ Renders an html tr element from arguments table.
 
 
     <h3>Parameters:</h3>
     <ul>
-        <li><span class="parameter">table</span>
-         rowArgs
-        </li>
         <li><span class="parameter">string</span>
-         entity
+         entityType
         </li>
         <li><span class="parameter">table</span>
          rowArgs
@@ -503,7 +920,7 @@
 </div> <!-- id="main" -->
 <div id="about">
 <i>generated by <a href="http://github.com/stevedonovan/LDoc">LDoc 1.4.6</a></i>
-<i style="float:right;">Last updated 2020-07-06 08:54:04 </i>
+<i style="float:right;">Last updated 2020-07-08 01:48:14 </i>
 </div> <!-- id="about" -->
 </div> <!-- id="container" -->
 </body>

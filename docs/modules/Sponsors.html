@@ -40,17 +40,17 @@
 <ul class="nowrap">
   <li><a href="../modules/AutoPointsTable.html">AutoPointsTable</a></li>
   <li><a href="../modules/PointsTable.html">PointsTable</a></li>
-  <li><a href="../modules/Sponsors.html">Sponsors</a></li>
+  <li><strong>Sponsors</strong></li>
   <li><a href="../modules/StatsTable.html">StatsTable</a></li>
-  <li><strong>SubArgumentFetcher</strong></li>
+  <li><a href="../modules/SubArgumentFetcher.html">SubArgumentFetcher</a></li>
 </ul>
 
 </div>
 
 <div id="content">
 
-<h1>Module <code>SubArgumentFetcher</code></h1>
-<p>This module fetches the arguments from a sub-template (A template used inside another template)</p>
+<h1>Module <code>Sponsors</code></h1>
+<p>This Module creates a table that shows the points of teams/players in a point system tournament.</p>
 <p></p>
 
 
@@ -58,8 +58,11 @@
 <table class="function_list">
 	<tr>
 	<td class="name" nowrap><a href="#p.main">p.main (frame)</a></td>
-	<td class="summary">Entry point
- Module entry point</td>
+	<td class="summary">Entry point.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#split">split (s, delim)</a></td>
+	<td class="summary">Splits a string by a delim.</td>
 	</tr>
 </table>
 
@@ -75,8 +78,8 @@
     <strong>p.main (frame)</strong>
     </dt>
     <dd>
-    Entry point
- Module entry point
+    Entry point.
+ Entry point.
 
 
     <h3>Parameters:</h3>
@@ -86,10 +89,34 @@
         </li>
     </ul>
 
+
+
+
+
+</dd>
+    <dt>
+    <a name = "split"></a>
+    <strong>split (s, delim)</strong>
+    </dt>
+    <dd>
+    Splits a string by a delim.
+ Splits a string by a delimiter and returns a table of all resulting words.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">s</span>
+         string
+        </li>
+        <li><span class="parameter">delim</span>
+         string
+        </li>
+    </ul>
+
     <h3>Returns:</h3>
     <ol>
 
-        string - the fetched arguments separated by '$' symbol
+        table
     </ol>
 
 

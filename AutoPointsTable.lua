@@ -1,4 +1,7 @@
 ---- This Module creates a table that shows the points of teams/players in a point system tournament (using subobjects defined in prizepool templates), this was mainly created for the new Circuit System starting RLCS Season X.
+---- Throughout this module, the word 'entity' will be used multiple times, it could just be replaced by 'team' whenever found.
+---- This Module is meant to be used for both players and teams, right now it only supports teams, but in some areas in the code, there will be checks to ensure the 'entity' we're dealing with is a team.
+---- The HTML Library was used to create the html code produced by this Module: https://www.mediawiki.org/wiki/Extension:Scribunto/Lua_reference_manual#HTML_library
 
 local p = {} --p stands for package
 
@@ -12,111 +15,78 @@ local tprint = require('Module:Sandbox/TablePrinter').tprint
 function p.main(frame)
     local args = getArgs(frame)
 
-    -- Initial checks
-    if not args['tournament1'] then
-        return error('Atleast 1 tournament must be specified')
-    end
-    if not args['entities'] then
-        args['entities'] = 'teams'
-        -- return error('entities must be provided as either "teams" or "players"')
-    end
-    if not args['wrapper-width'] then
-        return error('Please specify the wrapper width through "wrapper-width" argument, you might want to try different values to show the full width of the table')
+    local status, statusMessage = checkInputArgs(args)
+    if status ~= true then
+        return error(msg)
     end
 
     local entityType = args['entities']
-    local multiplier = args['multiplier'] and tonumber(args['multiplier']) or 1
-    local pointsPropertyName = args['pointsPropertyName'] and args['pointsPropertyName'] or 'prizepoints'
-    -- fetching data
-    local tournaments, deductions = getTournamentArgs(args)
-    -- expanding arguments provided by detailed team template
-    args = expandSubTemplates(args)
-    -- entities is a table that contains names of teams or people as well as their aliases
-    local entities = getEntities(entityType, args, #tournaments)
-    -- entitiesRows will contain the htmlTable rows that contain an entity and their corresponding points for each event
-    -- local entitiesRows = {}
+    local tournaments, deductions = fetchTournamentsData(args)
 
-    data = {}
+    -- Expand the arguments provided by the detailed team template (Template:RankingsTable/Row)
+    args = expandSubTemplates(args)
+
+    local entities = fetchEntitiesData(entityType, args, #tournaments)
+
+    local data = {}
     for i, entity in pairs(entities) do
-        local rowData = entityRowQuery(frame, entity, pointsPropertyName, tournaments, deductions)
-        rowData['entity'] = {name = entity['name']}
+        local rowData = queryRowDataFromSMW(frame, entity, tournaments, deductions)
         data[i] = rowData
     end
     
-    -- attach the styling data to the main data
-    for i, entity in pairs(entities) do
-        local name = entity['name']
-        for key, val in pairs(args) do
-            if string.find(key, name) then
-                if not data[i]['cssArgs'] then
-                    data[i]['cssArgs'] = {}
-                end
-                data[i]['cssArgs'][string.gsub(key, name, '')] = val
-            end
-        end
-    end
+    attachStylingDataToMain(args, data, entities)
 
-    -- sort teams by points
-    table.sort(data, function(a, b) return a['total']['totalPoints'] > b['total']['totalPoints'] end)
-
-    -- add the pbg
-    for i, entity in pairs(entities) do
-        local name = entity['name']
-        if args['pbg'..i] then
-            if not data[i]['cssArgs'] then
-                data[i]['cssArgs'] = {}
-            end
-            data[i]['cssArgs']['bg1'] = args['pbg'..i]
-        end
-    end
-
-    -- rendering
-    -- table creation
-    local responsiveWrapper = mw.html.create('div')
-    responsiveWrapper:addClass('table-responsive')
-    local tableWrapper = responsiveWrapper:tag('div')
-    wrapperWidth = args['wrapper-width']
-	tableWrapper
-		:css('overflow', 'hidden')
-        :css('border-top', '1px solid #bbbbbb')
-        :css('width', wrapperWidth..'px')
-    local htmlTable = tableWrapper:tag('table')
-    htmlTable
-		:addClass('wikitable')
-		:css('text-align', 'center')
-		:css('margin', '0px')
-    -- headers
-	if args['customheaders'] then
-        htmlTable:node(args['customheaders'])
-	else
-		htmlTable:node(makeTableHeaders(frame, entityType, tournaments, deductions))
-    end
+    table.sort(data, sortDataByTotalPoints)
     
-    -- rows
-    local realPos = 0
-    for i, row in pairs(data) do
-        realPos = realPos + 1
-        if data[i-1] and (data[i]['total']['totalPoints'] == data[i-1]['total']['totalPoints']) then
-            realPos = realPos - 1
-        end
-        row['position'] = {
-            position = realPos
-        }
-        htmlTable:node(renderRow(frame, entityType, row))
-    end
-    
-    htmlTable:done()
-    tableWrapper:done()
-    responsiveWrapper:node(warnings):done()
-    return responsiveWrapper
+    local bgOverwritePbg = args['bg>pbg']
+    attachPositionBGColorData(args, data, entities, bgOverwritePbg)
+
+    local htmlTable = makeHTMLTable(frame, args, data, tournaments, deductions)
+
+    return htmlTable
 
 end
 
---- Returns the tournaments in this template.
--- Returns table,table - two tables, one containing the names of the tournaments provided to this template, and the second one for indexing purposes.
--- @param table args - the arguments provided to this template
+--- Checks the input for required arguments.
+-- Checks the input for required arguments and enforces default values if arguments weren't provided.
+-- @param table args
+-- @return boolean - status (true if required arguments are specified and false otherwise)
+-- @return string - error message if one of the required arguments isn't specified
+function checkInputArgs(args)
+    if not args['tournament1'] then
+        return false, 'at least 1 tournament must be specified'
+    end
+    if not args['entities'] then
+        -- @vogan What is this? Why? Answer it in a comment
+        -- @xtratos When I initially started creating this template, it was intended for either teams or players
+        -- however I've decided to implement the players later
+        args['entities'] = 'team'
+    end
+    if not args['wrapper-width'] then
+        args['wrapper-width'] = 1000
+    end
+    if not args['header-height'] then
+        args['header-height'] = 86
+    end
+    return true
+end
+
+--- Custom sorting function.
+-- Sorts the teams by their total points.
+-- @param table a
+-- @param table b
+function sortDataByTotalPoints(a, b)
+    return a['total']['totalPoints'] > b['total']['totalPoints']
+end
+
+--- Fetches the tournament arguments provided.
+-- Fetches the tournaments provided through tournamentX and deductionsX then returns the result in 2 separate tables,
+-- one for the tournaments and one for the deductions
+-- @param table args
+-- @param string args.tournamentX - the name of the tournament X
+-- @param string args.deductionsX - the name of the deductions column for tournament X (optional) - if not specified, column isn't rendered
 -- @return table, table tournaments, deductions - two tables containing main data of tournaments and deductions
-function getTournamentArgs(args)
+function fetchTournamentsData(args)
     local i = 1
     local tournaments = {}
     local deductions = {}
@@ -139,10 +109,10 @@ function getTournamentArgs(args)
         i = i + 1
     end
 
-    --- Returns a tournament given its full name
-    -- Returns a tournament given its full name
-    -- @param fullName string
-    -- @return tournament table 
+    --- Finds a tournament given its full name.
+    -- 
+    -- @param string fullName
+    -- @return tournament table - the tournament of name X if exists, otherwise returns nil
     function tournaments:getByFullName(fullName)
         for i, t in tournaments do
             if t['fullName'] == fullName then
@@ -155,13 +125,13 @@ function getTournamentArgs(args)
     return tournaments, deductions
 end
 
---- Returns the entities from args.
--- Returns the table of entities provided by the positional arguments to this module.
--- @param entityType string - type of entities
--- @param args table - the arguments provided to this template
--- @param numTourn number - the number of tournaments to check aliases for
--- @return entities table - a table that contains the entities with their aliases
-function getEntities(entityType, args, numTourn)
+--- Fetches the entities data.
+-- Fetches the table of entities provided by the positional arguments to this module, an entity is either a team or a player (case sensitive).
+-- @param string entityType - type of entities (teams or players)
+-- @param table args - the arguments provided to this template
+-- @param number tournamentCount - the number of tournaments to check aliases for
+-- @return entities table - a table that contains data about entities; their name, type (team or player), aliases and point deductions in any of the tournaments
+function fetchEntitiesData(entityType, args, tournamentCount)
     local entities = {}
     local i = 1
     while args[i] do
@@ -170,14 +140,14 @@ function getEntities(entityType, args, numTourn)
             name = entityName,
             type = entityType
         }
-        for i = 1, numTourn do
-            if args[entityName..'alias'..i] then
-                local alias = args[entityName..'alias'..i]
-                tempEntity['alias'..i] = alias
+        for j = 1, tournamentCount do
+            if args[entityName..'alias'..j] then
+                local alias = args[entityName..'alias'..j]
+                tempEntity['alias'..j] = alias
             end
-            if args[entityName..'deduction'..i] then
-                local deduction = tonumber(args[entityName..'deduction'..i])
-                tempEntity['deduction'..i] = deduction
+            if args[entityName..'deduction'..j] then
+                local deduction = tonumber(args[entityName..'deduction'..j])
+                tempEntity['deduction'..j] = deduction
             end
         end
         table.insert(entities, tempEntity)
@@ -214,6 +184,62 @@ function expandSubTemplates(args)
     return nArgs
 end
 
+--- Attaches styling data.
+-- Attaches the styling data to the main data,
+-- uses the entities' names to get the corresponding styling data from the main arguments if they exist,
+-- then attaches this data to the given data table.
+-- @param table args - the main template arguments
+-- @param table data - the data table to which the css data is to be attached
+-- @param table entities - the table that contains the entities data
+function attachStylingDataToMain(args, data, entities)
+    for i, entity in pairs(entities) do
+        local entityName = entity['name']
+
+        for mainArgName, mainArgVal in pairs(args) do
+            if string.find(mainArgName, entityName) then
+                if not data[i]['cssArgs'] then
+                    data[i]['cssArgs'] = {}
+                end
+
+                -- ex:  mainArgName ->  cssArgName
+                -- ex:  Roguebg1    ->  bg1
+                local cssArgName = string.gsub(mainArgName, entityName, '')
+                data[i]['cssArgs'][cssArgName] = mainArgVal
+            end
+        end
+    end
+end
+
+--- Attaches the pbg data to the main data table.
+-- Attaches the pbg data to the main data table.
+-- @param table args - the arguments of the main template
+-- @param table data
+-- @param table entities
+-- @param boolean overwrite - whether or not the bg color overwrites the pbg color
+function attachPositionBGColorData(args, data, entities, overwrite)
+    for i, entity in pairs(entities) do
+        if args['pbg'..i] then
+            local pbgColor = args['pbg'..i]
+            
+            if not data[i]['cssArgs'] then
+                data[i]['cssArgs'] = {
+                    bg1 = pbgColor
+                }
+            else
+                local cssArgs = data[i]['cssArgs']
+
+                if (not cssArgs['bg1']) and (not cssArgs['bg']) then
+                    cssArgs['bg1'] = pbgColor
+                else
+                    if overwrite ~= 'true' then
+                        cssArgs['bg1'] = pbgColor
+                    end
+                end
+            end
+        end
+    end
+end
+
 --- Splits string a by a delim.
 -- Splits string a by a delimiter and returns a table of all resulting words.
 -- @param string s
@@ -232,53 +258,70 @@ end
 --- Creates the html code required to make the table header.
 -- This function creates the html code required to make the table header, actually expands another template that contains hard-coded html with some variables, as the headers hardly change.
 -- @param frame frame
--- @param string entityType
 -- @param table tournaments
 -- @param table deductions
+-- @param number headerHeight
 -- @return mw.html row tr - the expanded mw.html table row for the headers
-function makeTableHeaders(frame, entityType, tournaments, deductions)
-    local tr = mw.html.create('tr')
-    local height = tournaments['header-height'] and tournaments['header-height'] or 86
+function makeDefaultTableHeaders(frame, tournaments, deductions, headerHeight)
+    local row = mw.html.create('tr')
+    local sin45 = math.floor(math.sin(math.rad(45))*100)/100
     local expandedHeaderStart = protectedExpansion(frame, 'User:XtratoS/World_Championship_Ranking_Table/Header/Start', {
-        height = 86,
-        ['div-width'] = math.ceil(height*1.415)
+        height = headerHeight,
     })
-    tr:node(expandedHeaderStart)
-    i = 0
-    l = #tournaments
+    row:node(expandedHeaderStart)
+    local columnIndex = 1
+    local columnCount = #tournaments + #deductions
     for index, tournament in pairs(tournaments) do
         if type(tournament) == 'table' then
             local headerArgs = {
-                title = tournament['shortName'],
-                ['translate-x'] = 1.5,
-                ['translate-y'] = 41,
-                ['max-width'] = 50,
-                ['padding-left'] = 29,
-                ['div-width'] = math.ceil(height*1.415) + 30,
+                title = tournament['shortName']
             }
-            i = i + 1
-            if i == l then
-                headerArgs['after'] = '<div style="border-bottom: 1px solid #aaa; width: 160px;margin-left: 34px;margin-top: -1px;"><div>'
-            end
-            local expandedHeaderCell = protectedExpansion(frame, 'User:XtratoS/World_Championship_Ranking_Table/Header/Cell', headerArgs)
-            tr:node(expandedHeaderCell)
+            checkTwoLastHeaderColumns(headerArgs, columnIndex, columnCount)
+            local expandedHeaderCell = makeHeaderCell(frame, headerArgs)
+            row:node(expandedHeaderCell)
+            columnIndex = columnIndex + 1
             if deductions[index] then
-                headerArgs['title'] = deductions[index]['shortName']
-                headerArgs['morecss'] = 'font-size: 76%;'
-                expandedHeaderCell = protectedExpansion(frame, 'User:XtratoS/World_Championship_Ranking_Table/Header/Cell', headerArgs)
-                tr:node(expandedHeaderCell)
+                headerArgs = addDeductionArgs(headerArgs, deductions[index]['shortName'])
+                checkTwoLastHeaderColumns(headerArgs, columnIndex, columnCount)
+                expandedHeaderCell = makeHeaderCell(frame, headerArgs)
+                row:node(expandedHeaderCell)
+                columnIndex = columnIndex + 1
             end
         end
     end
-    tr:done()
-    return tr
+    row:done()
+    return row
+end
+
+--- Applies additional special styling for the last two header columns.
+-- This function modifies the original provided header arguments, use with caution
+-- @param table headerArgs
+-- @param number columnIndex
+-- @param number columnCount
+-- @return table headerArgs - the header arguments after modifying them according to the given index
+function checkTwoLastHeaderColumns(headerArgs, columnIndex, columnCount)
+    if columnIndex >= columnCount - 1 then
+        headerArgs['morecss'] = headerArgs['morecss']..'height:35px; margin-bottom:5px;'
+    end
+    return headerArgs
+end
+
+function makeHeaderCell(frame, args)
+    return protectedExpansion(frame, 'User:XtratoS/World_Championship_Ranking_Table/Header/Cell', args)
+end
+
+function addDeductionArgs(headerArgs, title)
+    headerArgs = {
+        morecss = 'padding-left: 12px;',
+        title = '<small><small>'..title..'</small></small>'
+    }
+    return headerArgs
 end
 
 --- Performs required queries to get entity points.
 -- This function performs the required smw ask queries to get the points of an entity gained in a series of tournaments.
 -- @param frame frame
 -- @param table entity
--- @param string pointsPropertyName
 -- @param table tournaments - a table containing tournament data
 -- @param string tournament.fullName - the full name of the tournament (as in the infobox)
 -- @param string tournament.shortName - the display name of the tournament (as shown in the header of the table)
@@ -288,54 +331,57 @@ end
 -- @return table prettyData.tournament - a reference to a table (the tournament/deduction which is represented by this data entry)
 -- @return number prettyData.points - the points of the entity in this entry
 -- @return table prettyData.total - a table containing the total points of this entity
-function entityRowQuery(frame, entity, pointsPropertyName, tournaments, deductions)
-    local prettyData = {}
+function queryRowDataFromSMW(frame, entity, tournaments, deductions)
+    local prettyData = {
+        entity = entity
+    }
     local totalPoints = 0
-    local originalEntityName = entity['name']
-    local index = 1
-    local fIndex = 1
-    while tournaments[index] do
-        local tournament = tournaments[index]
-        if tournament['type'] == 'tournament' then
-            local entityType = entity['type']
-            local entityName
-            if entity['alias' .. index] then
-                entityName = entity['alias' .. index]
-            else
-                entityName = originalEntityName
-            end
-            local queryString = '[[Has placement::+]] [[Has '.. entityType ..' page::' .. entityName .. ']] [[Has tournament name::' .. tournament['fullName'] .. ']]|?Has ' .. pointsPropertyName .. '|?Has tournament name|?Has placement|limit=1'
-            local queryResult = mw.smw.ask(queryString)
-            if queryResult == nil then queryResult = {} end
+    local tournamentIndex = 1
 
-            -- there should be a single query result anyways
+    local columnIndex = 1
+
+    while tournaments[tournamentIndex] do
+        local tournament = tournaments[tournamentIndex]
+        if tournament['type'] == 'tournament' then
+
+            local queryResult = performSMWQuery(entity, tournament)
+
+            -- there should be a single query result
             if queryResult[1] then
                 local r = queryResult[1]
-                local points = r['Has '..pointsPropertyName]
+                local points = r['Has prizepoints']
                 totalPoints = totalPoints + points
-                prettyData[fIndex] = {
+                prettyData[columnIndex] = {
                     tournament = tournament,
                     points = points,
                     placement = r['Has placement']
                 }
             else
-                prettyData[fIndex] = {
+                prettyData[columnIndex] = {
                     tournament = tournament,
                     points = '-'
                 }
             end
-            fIndex = fIndex + 1
-            if deductions[index] then
-                local deduction = deductions[index]
-                local points = entity['deduction'..index] and entity['deduction'..index] or 0
+
+            columnIndex = columnIndex + 1
+
+            if deductions[tournamentIndex] then
+                local deduction = deductions[tournamentIndex]
+                local points
+                if entity['deduction'..tournamentIndex] then
+                    points = entity['deduction'..tournamentIndex]
+                else
+                    points = 0
+                end
                 totalPoints = totalPoints - points
-                prettyData[fIndex] = {
+                prettyData[columnIndex] = {
                     tournament = deduction,
                     points = points
                 }
-                fIndex = fIndex + 1
+                columnIndex = columnIndex + 1
             end
-            index = index + 1
+
+            tournamentIndex = tournamentIndex + 1
         end
     end
 
@@ -348,13 +394,156 @@ function entityRowQuery(frame, entity, pointsPropertyName, tournaments, deductio
         return nil
     end
 
-    prettyData['total'] = {totalPoints = totalPoints}
+    prettyData['total'] = {
+        totalPoints = totalPoints
+    }
 
     return prettyData
 end
 
---- Styles the background, forground and font-weight of an element
--- Adds css styling for background-color, color and font-weight of an mw.html element
+--- Performs a SMW Ask Query.
+-- Performs a SMW Ask Query to get the points of a given entity for a given tournament.
+-- @param table entity
+-- @param string entity.type
+-- @param string entity.name
+-- @param table tournament
+-- @param string tournament.fullName
+-- @return table queryResult - a table returned by mw.smw.ask() - returns an empty table if no results found
+function performSMWQuery(entity, tournament)
+    local entityType = entity['type']
+    local tournamentIndex = tournament['index']
+    local entityName = getTournamentEntityName(entity, tournamentIndex)
+    local tournamentName = tournament['fullName']
+    local queryString = '[[Has placement::+]] [[Has '.. entityType ..' page::' .. entityName .. ']] [[Has tournament name::' .. tournamentName .. ']]|?Has prizepoints|?Has tournament name|?Has placement|limit=1'
+    local queryResult = mw.smw.ask(queryString)
+    if queryResult then
+        return queryResult
+    else
+        return {}
+    end
+end
+
+--- Fetches the entity name for a specific tournament.
+-- Fetches the entity name for a given tournament using the index of the tournament.
+-- @param table entity
+-- @param string entity.name
+-- @param number index
+-- @return string - the resolved name of the entity
+function getTournamentEntityName(entity, index)
+    local originalEntityName = entity['name']
+    local entityName
+
+    if entity['alias' .. index] then
+        entityName = entity['alias' .. index]
+    else
+        entityName = originalEntityName
+    end
+
+    return entityName
+end
+
+--- Creates an html table.
+-- Creates an html table wrapped in a div element and fills it with the data provided in the template arguments.
+-- @param frame fram
+-- @param table args - the main template arguments
+-- @parma table data - the data table that contains the entities' data
+-- @param table tournaments - a table that contains the tournaments data
+-- @param table deductions - a table that contains the deduction columns' data
+-- @return node tableWrapper - the node of the parent div which wraps the table node, this node contains all the html that renders the table
+function makeHTMLTable(frame, args, data, tournaments, deductions)
+    local tableWidth = args['wrapper-width']
+    local tableWrapper = createTableWrapper(tableWidth)
+    local htmlTable = createTableTag(tableWrapper)
+
+    local customTableHeader = args['custom-header']
+    local headerHeight = args['header-height']
+    addTableHeader(frame, htmlTable, customTableHeader, tournaments, deductions, headerHeight)
+
+    local entityType = args['entities']
+    renderTableBody(frame, htmlTable, data)
+
+    htmlTable:done()
+    tableWrapper:allDone()
+    return secondaryWrapper.parent
+end
+
+--- Creates a div.
+-- Creates a div which wraps the table node to make it mobile friendly.
+-- @param number tableWidth - the width of the table node
+-- @return node div - the secondary wrapper which wraps the table and is wrapped inside the primary wrapper, the primary wrapper is the wrapper which should be returned by the main fucntion
+function createTableWrapper(tableWidth)
+    local tableWrapper = mw.html.create('div')
+    tableWrapper
+        :addClass('table-responsive')
+    secondaryWrapper = tableWrapper:tag('div')
+    secondaryWrapper
+        :css('width', tableWidth..'px')
+        :css('overflow', 'hidden')
+        :css('border-top', '1px solid #bbbbbb')
+    secondaryWrapper.parent = tableWrapper
+    return secondaryWrapper
+end
+
+--- Creates a table node.
+-- Creates the main table node.
+-- @param node tableWrapper - the node which wraps this table node
+-- @return node htmlTable
+function createTableTag(tableWrapper)
+    local htmlTable = tableWrapper:tag('table')
+    htmlTable
+        :addClass('wikitable')
+        :css('text-align', 'center')
+        :css('margin', '0px')
+    return htmlTable
+end
+
+--- Adds the table header to the html table.
+-- Adds the table header to the html table.
+-- @param frame frame
+-- @param node htmlTable
+-- @param string customHeader
+-- @oaram table tournaments
+-- @param table deductions
+-- @return nil
+function addTableHeader(frame, htmlTable, customHeader, tournaments, deductions, headerHeight)
+    local tableHeader
+    if customHeader then
+        tableHeader = customHeader
+    else
+        tableHeader = makeDefaultTableHeaders(frame, tournaments, deductions, headerHeight)
+    end
+    htmlTable:node(tableHeader)
+end
+
+--- Creates the table body.
+-- Creates the table body and attaches it to the provided htmlTable node.
+-- @param frame frame
+-- @param node htmlTable
+-- @param table data
+-- @return nil
+function renderTableBody(frame, htmlTable, data)
+    local apparentPosition = 1
+    local previousPoints = -1
+    local currentPoints
+    for i, dataRow in pairs(data) do
+        currentPoints = dataRow['total']['totalPoints']
+        if previousPoints then
+            if currentPoints > previousPoints then
+                apparentPosition = apparentPosition
+            end
+        end
+        dataRow['position'] = {
+            position = apparentPosition
+        }
+        local entityType = dataRow['entity']['type']
+        local htmlRow = renderRow(frame, entityType, dataRow)
+        htmlTable:node(htmlRow)
+        apparentPosition = apparentPosition + 1
+    end
+end
+
+--- Styles the background, foreground and font-weight of an element.
+-- Adds css styling for background-color, color and font-weight of an mw.html element.
 -- @param object item - mw.html item
 -- @param table args - css styling arguments
 -- @param number c - the column number
@@ -385,31 +574,47 @@ function styleItem(item, args, c)
     return item
 end
 
---- Renders an html row from row arguments
--- Renders an html tr element from arguments table
+--- Renders an html row from row arguments.
+-- Renders an html tr element from arguments table.
 -- @params frame frame
 -- @param string entityType
 -- @param table rowArgs
 -- @return mw.html tr - table row represented by an mw.html object
 function renderRow(frame, entityType, rowArgs)
     local entityName = rowArgs['entity']['name']
-    -- row
-    local tr = mw.html.create('tr')
+    -- table row
+    local row = mw.html.create('tr')
+
     -- position cell
-    local td = tr:tag('td')
-    td:css('font-weight', 'bold'):wikitext(rowArgs['position']['position']..'.')
-    styleItem(td, rowArgs['cssArgs'], 1):done()
+    local td = row:tag('td')
+    td
+        :css('font-weight', 'bold')
+        :wikitext(rowArgs['position']['position']..'.')
+    
+    styleItem(td, rowArgs['cssArgs'], 1)
+        :done()
+
     -- entity cell
-    td = tr:tag('td')
+    td = row:tag('td')
     if entityType == 'team' then
         expandedEntity = protectedExpansion(frame, 'Team', {entityName})
     end
-    td:css('text-align', 'left'):wikitext(expandedEntity)
-    styleItem(td, rowArgs['cssArgs'], 2):done()
+    td
+        :css('text-align', 'left')
+        :wikitext(expandedEntity)
+    
+    styleItem(td, rowArgs['cssArgs'], 2)
+        :done()
+
     -- total points cell
-    td = tr:tag('td')
-    td:css('font-weight', 'bold'):wikitext(rowArgs['total']['totalPoints'])
-    styleItem(td, rowArgs['cssArgs'], 3):done()
+    td = row:tag('td')
+    td
+        :css('font-weight', 'bold')
+        :wikitext(rowArgs['total']['totalPoints'])
+    
+    styleItem(td, rowArgs['cssArgs'], 3)
+        :done()
+
     -- the rest of the cells
     local c = 4
     for _, cell in pairs(rowArgs) do
@@ -417,14 +622,15 @@ function renderRow(frame, entityType, rowArgs)
             if cell['tournament'] then
                 if cell['tournament']['type'] == 'tournament' then
                     if cell['points'] then
-                        td = tr:tag('td')
+                        td = row:tag('td')
                         td:wikitext(cell['points'])
                         styleItem(td, rowArgs['cssArgs'], c):done()
                         c = c + 1
                     end
                 elseif cell['tournament']['type'] == 'deduction' then
                     if cell['points'] then
-                        td = tr:tag('td')
+                        td = row:tag('td')
+                        td:css('padding', '3px')
                         local label
                         if cell['points'] > 0 then
                             label = protectedExpansion(frame, 'Popup', {
@@ -443,8 +649,8 @@ function renderRow(frame, entityType, rowArgs)
             end
         end
     end
-    tr:done()
-    return tr
+    row:done()
+    return row
 end
 
 --- Safely expands a template.
