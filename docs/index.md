@@ -1,4 +1,4 @@
-=Functions=
+==Functions==
 ===p.main (frame)===
 *Entry point. The entry point of this Module.
 *Parameters:
@@ -50,7 +50,7 @@
 *Attaches the pbg data to the main data table. Attaches the pbg data to the main data table.
 *Parameters:
 **args table the arguments of the main template
-**data {{cellEntityData,...},...}
+**data { {cellEntityData,...},...}
 **entities table
 **overwrite boolean - whether or not the bg color overwrites the pbg color
 *Returns:
@@ -245,7 +245,7 @@ addTableHeader (frame, htmlTable, customHeader, tournaments, deductions, headerH
 **args table
 *Returns:
 **string the expanded template 
-=Tables=
+==Tables==
 ===tournament===
 *a tournament table that represents a single tournament.
 *Fields:
