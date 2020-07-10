@@ -138,7 +138,7 @@
 *Parameters:
 **frame frame
 **args table the main template arguments
-**data {{cellEntityData,...},...} the data table that contains the entities' data
+**data { {cellEntityData,...},...} the data table that contains the entities' data
 **tournaments tournament a table that contains the tournaments data
 **deductions tournament a table that contains the deduction columns' data
 *Returns:
