@@ -97,18 +97,18 @@ function makeTable(frame, args, entities)
     local ent = string.sub(string.lower(entities), 1, 1)
     local data = fetchData(args, numCols, ent, frame)
     -- create the table rows
-    --- counters to get the correct position of each player
+    -- counters to get the correct position of each player
     local appearantPlace = 1
     local actualPlace = 0
     local prevPoints = -1
-    --- placeholders
+    -- placeholders
     local eData
     local td
     local positionData
-    --- start looping the rows and use the data to create HTML
-    ---- the number of entities to stop showing completely at
+    -- start looping the rows and use the data to create HTML
+    -- the number of entities to stop showing completely at
     local num_players = getNum(args['removeafter'], #data)
-    ---- the number of entities to collpase after
+    -- the number of entities to collpase after
     if num_players > 12 then
         htmlTable:addClass('prizepooltable'):addClass('collapsed'):attr('data-cutafter', getNum(args['cutafter'], '12'))
     end
@@ -267,7 +267,7 @@ function fetchData(args, numCols, ent, frame)
                     eData['playerTeam'] = protectedExpansion(frame, 'teamPart/'..args['p'..currentE..'team'])
                 end
             end
-        --- for teams
+        -- for teams
         else
             if string.lower(eData['name']) == 'tbd' then
                 eData['expandedEntity'] = '[[File:Logo_filler_std.png|link=]] '..protectedExpansion(frame, 'Abbr/TBD')
