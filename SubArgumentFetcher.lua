@@ -7,8 +7,8 @@ local tprint = require('Module:Sandbox/TablePrinter').tprint
 
 --- Entry point
 -- Module entry point
--- @param frame frame
--- @return string - the fetched arguments separated by '$' symbol
+-- @tparam frame frame
+-- @treturn string the fetched arguments separated by '$'
 function p.main(frame)
     args = getArgs(frame)
     fetchedArgs = ''
