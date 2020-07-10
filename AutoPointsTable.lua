@@ -59,7 +59,7 @@ end
 -- Checks the input for required arguments and enforces default values if arguments weren't provided.
 -- @tparam table args
 -- @treturn boolean status - (true if required arguments are specified and false otherwise)
--- @treturn string erro - error message if one of the required arguments isn't specified
+-- @treturn string error - error message if one of the required arguments isn't specified
 function checkInputArgs(args)
     if not args['tournament1'] then
         return false, 'at least 1 tournament must be specified'
