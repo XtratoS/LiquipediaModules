@@ -66,7 +66,7 @@
 *Parameters:
 
 **args table the main template arguments
-**data tournamentEntityQueryData the data table to which the css data is to be attached
+**data [[#tournamentEntityQueryData|tournamentEntityQueryData]] the data table to which the css data is to be attached
 **entities table the table that contains the entities data
 
 *Returns:
@@ -165,7 +165,7 @@
 
 *Returns:
 
-**tournamentEntityQueryData 
+**[[#tournamentEntityQueryData|tournamentEntityQueryData]] 
 
 ===querySingleDataCellFromSMW (entity, tournament)===
 *Performs a SMW Ask Query. Performs a SMW Ask Query to get the points of a given entity for a given tournament.
@@ -404,7 +404,7 @@
 **total table - a table containing the total points of this entity
 
 ===cellEntityData===
-*same as tournamentEntityQueryData in addition to cssData.
+*same as [[#tournamentEntityQueryData|tournamentEntityQueryData]] in addition to cssData.
 *Fields:
 
 **tournament table - a reference to the table (the tournament/deduction) which is represented by this data entry
