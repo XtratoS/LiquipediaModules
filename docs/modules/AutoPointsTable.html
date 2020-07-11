@@ -41,7 +41,6 @@
 <ul class="nowrap">
   <li><strong>AutoPointsTable</strong></li>
   <li><a href="../modules/PointsTable.html">PointsTable</a></li>
-  <li><a href="../modules/Sponsors.html">Sponsors</a></li>
   <li><a href="../modules/StatsTable.html">StatsTable</a></li>
   <li><a href="../modules/SubArgumentFetcher.html">SubArgumentFetcher</a></li>
 </ul>
@@ -55,7 +54,9 @@
 <p>
  Revision 1.0
 <p> Throughout this module, the word 'entity' will be used multiple times, it could just be replaced by 'team' whenever found.
- Entities are case-sensitive.
+ Entity Names are case-sensitive.
+<p> There are 2 different naming conventions used; for arguments provided by the Module invoker, variable with names of multiple words are separated by a dash, for instance 'header-height';
+ Everything else within this module uses camelCase.
 <p> This Module is meant to be used for both players and teams, in revision 1.0, only teams are implemented.
 <p> The HTML Library was used to create the html code produced by this Module: https://www.mediawiki.org/wiki/Extension:Scribunto/Lua_reference_manual#HTML_library</p>
 
@@ -91,7 +92,7 @@
 	<td class="summary">Attaches styling data.</td>
 	</tr>
 	<tr>
-	<td class="name"><a href="#attachPositionBGColorData">attachPositionBGColorData (args, data, entities, overwrite)</a></td>
+	<td class="name"><a href="#attachPositionBGColorData">attachPositionBGColorData (args, data, entities)</a></td>
 	<td class="summary">Attaches the pbg data to the main data table.</td>
 	</tr>
 	<tr>
@@ -111,7 +112,7 @@
 	<td class="summary">Applies additional special styling for the last three header cell.</td>
 	</tr>
 	<tr>
-	<td class="name"><a href="#makeHeaderCell">makeHeaderCell (frame, args)</a></td>
+	<td class="name"><a href="#makeHeaderCell">makeHeaderCell (frame, headerArgs)</a></td>
 	<td class="summary">Expands the header cell template.</td>
 	</tr>
 	<tr>
@@ -179,6 +180,10 @@
 	<td class="summary">Creates the cell which shows the number of points of the entity for a single tournament.</td>
 	</tr>
 	<tr>
+	<td class="name"><a href="#makeDeductionPointsCell">makeDeductionPointsCell (frame, row, rowArgs, cell, c)</a></td>
+	<td class="summary">Creates the cell which shows the number of points deducted from an entity for a single column.</td>
+	</tr>
+	<tr>
 	<td class="name"><a href="#countEntries">countEntries (t)</a></td>
 	<td class="summary">Counts the entries in a table.</td>
 	</tr>
@@ -193,10 +198,6 @@
 </table>
 <h2><a href="#Tables">Tables</a></h2>
 <table class="function_list">
-	<tr>
-	<td class="name"><a href="#genericTournaments">genericTournaments</a></td>
-	<td class="summary">a genericTournaments table, can contain either tournaments or deductions.</td>
-	</tr>
 	<tr>
 	<td class="name"><a href="#tournament">tournament</a></td>
 	<td class="summary">a tournament table that represents a single tournament.</td>
@@ -262,7 +263,7 @@
     <ul>
         <li><span class="parameter">args</span>
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
-
+         the main template arguments
         </li>
     </ul>
 
@@ -270,10 +271,10 @@
     <ol>
         <li>
            <span class="types"><span class="type">boolean</span></span>
-        status - (true if required arguments are specified and false otherwise)</li>
+        status (true if required arguments are specified and false otherwise)</li>
         <li>
            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
-        erro - error message if one of the required arguments isn't specified</li>
+        error error message if one of the required arguments isn't specified</li>
     </ol>
 
 
@@ -320,7 +321,7 @@
     <ul>
         <li><span class="parameter">args</span>
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
-         - the main template arguments
+         the main template arguments
         </li>
     </ul>
 
@@ -351,15 +352,15 @@
     <ul>
         <li><span class="parameter">entityType</span>
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
-         - type of entities (teams or players)
+         type of entities (teams or players)
         </li>
         <li><span class="parameter">args</span>
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
-         - the arguments provided to this template
+         the main template arguments
         </li>
         <li><span class="parameter">tournamentCount</span>
             <span class="types"><span class="type">number</span></span>
-         - the number of tournaments to check aliases for
+         the number of tournaments to check aliases for
         </li>
     </ul>
 
@@ -367,7 +368,7 @@
     <ol>
 
            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
-        entities - a table that contains data about entities; their name, type (team or player), aliases and point deductions in any of the tournaments
+        entities a table that contains data about entities; their name, type (team or player), aliases and point deductions in any of the tournaments
     </ol>
 
 
@@ -387,7 +388,7 @@
     <ul>
         <li><span class="parameter">args</span>
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
-         - the main template arguments
+         the main template arguments
         </li>
     </ul>
 
@@ -441,7 +442,7 @@
 </dd>
     <dt>
     <a name = "attachPositionBGColorData"></a>
-    <strong>attachPositionBGColorData (args, data, entities, overwrite)</strong>
+    <strong>attachPositionBGColorData (args, data, entities)</strong>
     </dt>
     <dd>
     Attaches the pbg data to the main data table.
@@ -452,7 +453,7 @@
     <ul>
         <li><span class="parameter">args</span>
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
-         the arguments of the main template
+         the main template arguments
         </li>
         <li><span class="parameter">data</span>
             <span class="types"><a class="type" href="../modules/AutoPointsTable.html#cellEntityData">{{cellEntityData,...},...}</a></span>
@@ -461,10 +462,6 @@
         <li><span class="parameter">entities</span>
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
 
-        </li>
-        <li><span class="parameter">overwrite</span>
-            <span class="types"><span class="type">boolean</span></span>
-         - whether or not the bg color overwrites the pbg color
         </li>
     </ul>
 
@@ -503,7 +500,7 @@
     <ol>
 
            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">{string,...}</a></span>
-        words - a table containing the split up words
+        words a table containing the split up words
     </ol>
 
 
@@ -609,7 +606,7 @@
     <h3>Returns:</h3>
     <ol>
 
-        table headerArgs - the header arguments after modification according to the given index
+        table headerArgs the header arguments after modification according to the given index
     </ol>
 
 
@@ -618,7 +615,7 @@
 </dd>
     <dt>
     <a name = "makeHeaderCell"></a>
-    <strong>makeHeaderCell (frame, args)</strong>
+    <strong>makeHeaderCell (frame, headerArgs)</strong>
     </dt>
     <dd>
     Expands the header cell template.
@@ -631,9 +628,9 @@
             <span class="types"><span class="type">frame</span></span>
 
         </li>
-        <li><span class="parameter">args</span>
+        <li><span class="parameter">headerArgs</span>
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
-         - the arguments to use while expanding the template
+
         </li>
     </ul>
 
@@ -661,18 +658,18 @@
     <ul>
         <li><span class="parameter">headerArgs</span>
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
-         - the original header arguments
+         the original header arguments
         </li>
         <li><span class="parameter">title</span>
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
-         - the title to use in the cell header
+         the title to use in the cell header
         </li>
     </ul>
 
     <h3>Returns:</h3>
     <ol>
 
-        table headerArgs - the header arguments after modification
+        table headerArgs the header arguments after modification
     </ol>
 
 
@@ -699,12 +696,12 @@
 
         </li>
         <li><span class="parameter">tournaments</span>
-            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
-         - a table containing tournament data
+            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#tournament">{tournament,...}</a></span>
+
         </li>
         <li><span class="parameter">deductions</span>
-            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
-         - a table containing data regarding the deductions columns
+            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#tournament">{tournament,...}</a></span>
+
         </li>
     </ul>
 
@@ -730,29 +727,20 @@
     <h3>Parameters:</h3>
     <ul>
         <li><span class="parameter">entity</span>
-        <ul>
-        <li><span class="parameter">type</span>
-            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+            <span class="types"><span class="type">entity</span></span>
 
         </li>
-        <li><span class="parameter">name</span>
-            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
-
-        </li>
-        </li></ul>
         <li><span class="parameter">tournament</span>
-        <ul>
-        <li><span class="parameter">fullName</span>
-            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#tournament">tournament</a></span>
 
         </li>
-        </li></ul>
     </ul>
 
     <h3>Returns:</h3>
     <ol>
 
-        table queryResult - a table returned by mw.smw.ask() - returns an empty table if no results found
+           <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
+        queryResult a table returned by mw.smw.ask(), returns an empty table if no results found
     </ol>
 
 
@@ -771,12 +759,9 @@
     <h3>Parameters:</h3>
     <ul>
         <li><span class="parameter">entity</span>
-        <ul>
-        <li><span class="parameter">name</span>
-            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+            <span class="types"><span class="type">entity</span></span>
 
         </li>
-        </li></ul>
         <li><span class="parameter">index</span>
             <span class="types"><span class="type">number</span></span>
 
@@ -1062,7 +1047,7 @@
 
         </li>
         <li><span class="parameter">rowArgs</span>
-            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
+            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#cellEntityData">cellEntityData</a></span>
 
         </li>
     </ul>
@@ -1214,6 +1199,49 @@
 
 </dd>
     <dt>
+    <a name = "makeDeductionPointsCell"></a>
+    <strong>makeDeductionPointsCell (frame, row, rowArgs, cell, c)</strong>
+    </dt>
+    <dd>
+    Creates the cell which shows the number of points deducted from an entity for a single column.
+ Creates the cell which shows the number of points deducted from an entity for a single column and adds it to the given row.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">frame</span>
+            <span class="types"><span class="type">frame</span></span>
+
+        </li>
+        <li><span class="parameter">row</span>
+            <span class="types"><span class="type">node</span></span>
+         the mw.html row node to add the cell to
+        </li>
+        <li><span class="parameter">rowArgs</span>
+            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#cellEntityData">{cellEntityData,...}</a></span>
+
+        </li>
+        <li><span class="parameter">cell</span>
+            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#cellEntityData">cellEntityData</a></span>
+
+        </li>
+        <li><span class="parameter">c</span>
+            <span class="types"><span class="type">number</span></span>
+         the index of the column counting from the position cell as 1
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        nil
+    </ol>
+
+
+
+
+</dd>
+    <dt>
     <a name = "countEntries"></a>
     <strong>countEntries (t)</strong>
     </dt>
@@ -1316,31 +1344,6 @@
     <h2 class="section-header "><a name="Tables"></a>Tables</h2>
 
     <dl class="function">
-    <dt>
-    <a name = "genericTournaments"></a>
-    <strong>genericTournaments</strong>
-    </dt>
-    <dd>
-    a genericTournaments table, can contain either tournaments or deductions.
-
-
-    <h3>Fields:</h3>
-    <ul>
-        <li><span class="parameter">shortName</span>
-            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
-
-        </li>
-        <li><span class="parameter">fullName</span>
-            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
-
-        </li>
-    </ul>
-
-
-
-
-
-</dd>
     <dt>
     <a name = "tournament"></a>
     <strong>tournament</strong>
@@ -1500,7 +1503,7 @@
 </div> <!-- id="main" -->
 <div id="about">
 <i>generated by <a href="http://github.com/stevedonovan/LDoc">LDoc 1.4.6</a></i>
-<i style="float:right;">Last updated 2020-07-10 07:00:05 </i>
+<i style="float:right;">Last updated 2020-07-11 08:09:37 </i>
 </div> <!-- id="about" -->
 </div> <!-- id="container" -->
 </body>
