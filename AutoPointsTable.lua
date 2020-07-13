@@ -1,10 +1,10 @@
 ---- This Module creates a table that shows the points of teams/players in a point system tournament (using subobjects defined in prizepool templates), this was mainly created for the new Circuit System starting RLCS Season X.
 ---- Revision 1.0
 ----
----- Throughout this module, the word 'entity' will be used multiple times, it could just be replaced by 'team' whenever found.
----- Entities are case-sensitive.
+---- Team Names are case sensitive
 ----
----- This Module is meant to be used for both players and teams, in revision 1.0, only teams are implemented.
+---- There are 2 different naming conventions used; for arguments provided by the Module invoker, variable with names of multiple words are separated by a dash, for instance 'header-height'; 
+---- Everything else within this module uses camelCase.
 ----
 ---- The HTML Library was used to create the html code produced by this Module: https://www.mediawiki.org/wiki/Extension:Scribunto/Lua_reference_manual#HTML_library
 
@@ -13,67 +13,83 @@ local p = {} --p stands for package
 local getArgs = require('Module:Arguments').getArgs
 local tprint = require('Module:Sandbox/TablePrinter').tprint
 
-local sin45 = math.floor(math.sin(math.rad(45))*100) / 100
+local SIN_45_DEG = math.floor(math.sin(math.rad(45))*100) / 100
+local gConfig = {}
 
 --- Entry point.
--- The entry point of this Module.
+-- This is the entry point of the Module.
 -- @tparam frame frame
 -- @return mw.html div tableWrapper
 function p.main(frame)
     local args = getArgs(frame)
 
-    local status, statusMessage = checkInputArgs(args)
-    if status ~= true then
-        return error(msg)
-    end
+    if MandatoryInputArgsExist(args) then end
+    
+    setUnprovidedArgsToDefault(args)
 
-    local entityType = args['entities']
-    local tournaments, deductions = fetchTournamentsData(args)
+    setGlobalConfig(args)
+
+    local tournaments, deductions = fetchTournamentData(args)
 
     -- Expand the arguments provided by the detailed team template (Template:RankingsTable/Row)
     args = expandSubTemplates(args)
 
-    local tournamentCount = countEntries(tournaments)
-    local entities = fetchEntitiesData(entityType, args, tournamentCount)
+    local numberOfTournaments = countEntries(tournaments)
+    local teams = fetchTeamData(args, numberOfTournaments)
 
-    local data = {}
-    for i, entity in pairs(entities) do
-        local rowData = queryRowDataFromSMW(frame, entity, tournaments, deductions)
-        data[i] = rowData
+    local tableData = {}
+    for i, team in pairs(teams) do
+        local teamPointsData = queryTeamPointsDataFromSMW(frame, team, tournaments, deductions)
+        tableData[i] = teamPointsData
     end
     
-    attachStylingDataToMain(args, data, entities)
+    attachStylingDataToMainData(args, tableData, teams)
 
-    table.sort(data, sortData)
+    table.sort(tableData, sortData)
     
-    local bgOverwritePbg = args['bg>pbg']
-    attachPositionBGColorData(args, data, entities, bgOverwritePbg)
+    attachPositionBackgroundColorsToCells(args, tableData, teams)
 
-    local htmlTable = makeHTMLTable(frame, args, data, tournaments, deductions)
+    local pointsTable = makePointsTable(frame, args, tableData, tournaments, deductions)
 
-    return htmlTable
+    return pointsTable
+    -- return tprint(data)
 
 end
 
---- Checks the input for required arguments.
--- Checks the input for required arguments and enforces default values if arguments weren't provided.
--- @tparam table args
--- @treturn boolean status - (true if required arguments are specified and false otherwise)
--- @treturn string error - error message if one of the required arguments isn't specified
-function checkInputArgs(args)
+--- Checks for mandatory inputs and throws an error if any of them isn't provided.
+-- @tparam table args the main template arguments
+-- @return nil
+function MandatoryInputArgsExist(args)
     if not args['tournament1'] then
-        return false, 'at least 1 tournament must be specified'
+        error('at least 1 tournament must be specified')
     end
-    if not args['entities'] then
-        -- @vogan What is this? Why? Answer it in a comment
-        -- @xtratos When I initially started creating this template, it was intended for either teams or players
-        -- however I've decided to implement the players later
-        args['entities'] = 'team'
-    end
+end
+
+--- Sets the unprovided arguments to default value.
+-- @tparam table args the main template arguments
+-- @return nil
+function setUnprovidedArgsToDefault(args)
     if not args['header-height'] then
         args['header-height'] = 100
     end
-    return true
+end
+
+--- Sets the global configuration variables.
+-- @tparam table args the main template arguments
+-- @return nil
+function setGlobalConfig(args)
+    if args['started'] then 
+        if args['started'] == 'true' then
+            gConfig['started'] = true
+        else
+            gConfig['started'] = false
+        end
+    end
+    if args['limit'] then
+        gConfig['limit'] = tonumber(args['limit'])
+    end
+    gConfig['headerHeight'] = args['header-height']
+    gConfig['bg>pbg'] = args['bg>pbg']
 end
 
 --- Custom sorting function.
@@ -81,38 +97,45 @@ end
 -- @tparam table a
 -- @tparam table b
 function sortData(a, b)
-    if a['total']['totalPoints'] == b['total']['totalPoints'] then
-        return a['entity']['name'] < b['entity']['name']
+    local totalPointsA = a['total']['totalPoints']
+    local totalPointsB = b['total']['totalPoints']
+    local nameA = a['team']['name']
+    local nameB = b['team']['name']
+
+    if totalPointsA == totalPointsB then
+        return nameA < nameB
     end
-    return a['total']['totalPoints'] > b['total']['totalPoints']
+    return totalPointsA > totalPointsB
 end
 
 --- Fetches the tournament arguments provided.
--- Fetches the tournaments provided through tournamentX and deductionsX then returns the result in 2 separate tables,
--- one for the tournaments and one for the deductions
--- @tparam table args - the main template arguments
+-- through tournamentX and deductionsX then returns the result in 2 separate tables
+-- one for the tournaments and one for the deductions.
+-- @tparam table args the main template arguments
 -- @treturn {tournament,...} a table of tournaments
 -- @treturn {tournament,...} a table of deductions
-function fetchTournamentsData(args)
+function fetchTournamentData(args)
     local i = 1
     local tournaments = {}
     local deductions = {}
     while args['tournament'..i] do
-        local fullName = args['tournament'..i]
+        local tournamentFullName = args['tournament'..i]
+        local tournamentShortName = args['tournament'..i..'name']
         tournaments[i] = {
             index = i,
-            fullName = fullName,
-            shortName = args['tournament'..i..'name'],
+            fullName = tournamentFullName,
+            shortName = tournamentShortName,
             link = args['tournament'..i..'link'],
             type = 'tournament',
-            endDate = getTournamentEndDate(fullName)
+            endDate = getTournamentEndDate(tournamentFullName)
         }
         if args['deductions'..i] then
+            deductionShortName = args['deductions'..i]
             deductions[i] = {
                 index = i,
-                tournamentName = args['tournament'..i..'name'],
-                shortName = args['deductions'..i],
-                fullName = args['deductions'..i],
+                tournamentName = tournamentShortName,
+                shortName = deductionShortName,
+                fullName = deductionShortName,
                 type = 'deduction'
             }
         end
@@ -122,47 +145,44 @@ function fetchTournamentsData(args)
     return tournaments, deductions
 end
 
---- Fetches the entities data.
--- Fetches the table of entities provided by the main arguments to the template that invokes this module, an entity is either a team or a player (case sensitive).
--- @tparam string entityType - type of entities (teams or players)
--- @tparam table args - the arguments provided to this template
--- @tparam number tournamentCount - the number of tournaments to check aliases for
--- @treturn table entities - a table that contains data about entities; their name, type (team or player), aliases and point deductions in any of the tournaments
-function fetchEntitiesData(entityType, args, tournamentCount)
-    local entities = {}
+--- Fetches the teams' data.
+-- Fetches the table of teams provided by the main arguments to the template that invokes this module - case sensitive.
+-- @tparam table args the main template arguments
+-- @tparam number numberOfTournaments the number of tournaments to check aliases for
+-- @treturn table teams a table that contains data about teams; their name, aliases and point deductions in any of the tournaments
+function fetchTeamData(args, numberOfTournaments)
+    local teams = {}
     for argKey, argVal in pairs(args) do
-        -- if string.find(argVal, 'team') then
         if type(argKey) == 'number' then
-            local entityName = argVal
-            local tempEntity = {
-                name = entityName,
-                type = entityType
+            local teamName = argVal
+            local tempTeam = {
+                name = teamName
             }
-            if args[entityName..'strike'] == 'true' then
-                tempEntity['strikeThrough'] = true
+            if args[teamName..'strike'] == 'true' then
+                tempTeam['strikeThrough'] = true
             end
-            if args[entityName..'display-template'] then
-                tempEntity['displayTemplate'] = args[entityName..'display-template']
+            if args[teamName..'display-template'] then
+                tempTeam['displayTemplate'] = args[teamName..'display-template']
             end
-            for j = 1, tournamentCount do
-                if args[entityName..'alias'..j] then
-                    local alias = args[entityName..'alias'..j]
-                    tempEntity['alias'..j] = alias
+            for j = 1, numberOfTournaments do
+                if args[teamName..'alias'..j] then
+                    local alias = args[teamName..'alias'..j]
+                    tempTeam['alias'..j] = alias
                 end
-                if args[entityName..'deduction'..j] then
-                    local deduction = tonumber(args[entityName..'deduction'..j])
-                    tempEntity['deduction'..j] = deduction
+                if args[teamName..'deduction'..j] then
+                    local deduction = tonumber(args[teamName..'deduction'..j])
+                    tempTeam['deduction'..j] = deduction
                 end
             end
-            table.insert(entities, tempEntity)
+            table.insert(teams, tempTeam)
         end
     end
-    return entities
+    return teams
 end
 
 --- Expands the sub-templates' args.
 -- Expands the args provided to any of the sub-templates to the args of the main template changing the keys accordingly.
--- @tparam table args - the main template arguments
+-- @tparam table args the main template arguments
 -- @treturn table the arguments after adding the expanded arguments
 function expandSubTemplates(args)
     local nArgs = {}
@@ -190,42 +210,46 @@ end
 
 --- Attaches styling data.
 -- Attaches the styling data to the main data,
--- uses the entities' names to get the corresponding styling data from the main arguments if they exist,
+-- uses the teams' names to get the corresponding styling data from the main arguments if they exist,
 -- then attaches this data to the given data table.
 -- @tparam table args the main template arguments
--- @tparam tournamentEntityQueryData data the data table to which the css data is to be attached
--- @tparam table entities the table that contains the entities data
+-- @tparam tournamentTeamQueryData data the data table to which the css data is to be attached
+-- @tparam table teams the table that contains the teams data
 -- @return nil
-function attachStylingDataToMain(args, data, entities)
-    for i, entity in pairs(entities) do
-        local entityName = entity['name']
+function attachStylingDataToMainData(args, data, teams)
+    for i, team in pairs(teams) do
+        local teamName = team['name']
 
         for mainArgName, mainArgVal in pairs(args) do
-            for _, cssProp in pairs({'bg', 'fg', 'pbg', 'bold'}) do
-                if string.find(mainArgName, entityName..cssProp) then
-                    if not data[i]['cssArgs'] then
-                        data[i]['cssArgs'] = {}
-                    end
-
-                    -- ex:  mainArgName ->  cssArgName
-                    -- ex:  Roguebg1    ->  bg1
-                    local cssArgName = string.gsub(mainArgName, entityName..cssProp, '')
-                    data[i]['cssArgs'][cssArgName] = mainArgVal
+            local conditions = {
+                string.find(mainArgName, 'bg'),
+                string.find(mainArgName, 'fg'),
+                string.find(mainArgName, 'bold')
+            }
+            if string.find(mainArgName, teamName) and
+            (conditions[1] or conditions[2] or conditions[3]) then
+                if not data[i]['cssArgs'] then
+                    data[i]['cssArgs'] = {}
                 end
+
+                -- ex:  mainArgName ->  cssArgName
+                -- ex:  Roguebg1    ->  bg1
+                local cssArgName = string.gsub(mainArgName, teamName, '')
+                data[i]['cssArgs'][cssArgName] = mainArgVal
             end
         end
     end
 end
 
---- Attaches the pbg data to the main data table.
--- Attaches the pbg data to the main data table.
--- @tparam table args the arguments of the main template
--- @tparam {{cellEntityData,...},...} data
--- @tparam table entities
--- @tparam boolean overwrite - whether or not the bg color overwrites the pbg color
+--- Attaches the position background colors to the main data table.
+-- Attaches the position background colors to the main data table.
+-- @tparam table args the main template arguments
+-- @tparam {{cellTeamData,...},...} data
+-- @tparam table teams
 -- @return nil
-function attachPositionBGColorData(args, data, entities, overwrite)
-    for i, entity in pairs(entities) do
+function attachPositionBackgroundColorsToCells(args, data, teams)
+    local ShouldOverwrite = gConfig['bg>pbg']
+    for i, team in pairs(teams) do
         if args['pbg'..i] then
             local pbgColor = args['pbg'..i]
             
@@ -239,7 +263,7 @@ function attachPositionBGColorData(args, data, entities, overwrite)
                 if (not cssArgs['bg1']) and (not cssArgs['bg']) then
                     cssArgs['bg1'] = pbgColor
                 else
-                    if overwrite ~= 'true' then
+                    if ShouldOverwrite ~= 'true' then
                         cssArgs['bg1'] = pbgColor
                     end
                 end
@@ -252,7 +276,7 @@ end
 -- Splits string a by a delimiter and returns a table of all resulting words.
 -- @tparam string s
 -- @tparam string delim
--- @treturn {string,...} words - a table containing the split up words
+-- @treturn {string,...} words a table containing the split up words
 function split(s, delim)
     words = {}
     j = 1
@@ -266,13 +290,13 @@ end
 --- Creates the html code required to make the table header.
 -- This function creates the html code required to make the table header, actually expands another template that contains hard-coded html with some variables, as the headers hardly change.
 -- @tparam frame frame
--- @tparam table tournaments
--- @tparam table deductions
--- @tparam number headerHeight
+-- @tparam {tournament,...} tournaments
+-- @tparam {tournament,...} deductions
 -- @treturn node row the expanded mw.html table row for the headers
-function makeDefaultTableHeaders(frame, tournaments, deductions, headerHeight)
+function makeDefaultTableHeaders(frame, tournaments, deductions)
+    local headerHeight = gConfig['headerHeight']
     local row = mw.html.create('tr')
-    local divWidth = math.ceil(headerHeight * sin45 * 2) + 1
+    local divWidth = math.ceil(headerHeight * SIN_45_DEG * 2) + 1
     local translateY = (headerHeight - 50) / 2
     local expandedHeaderStart = protectedExpansion(frame, 'User:XtratoS/World_Championship_Ranking_Table/Header/Start', {
         translateY = translateY - 26,
@@ -288,7 +312,7 @@ function makeDefaultTableHeaders(frame, tournaments, deductions, headerHeight)
                 title = getTournamentHeaderTitle(tournament)
             }
 
-            checkLastThreeHeaderCells(headerArgs, columnIndex, columnCount, divWidth)
+            appendDivToLastThreeHeaderCells(headerArgs, columnIndex, columnCount, divWidth)
 
             headerArgs['translateY'] = translateY
             headerArgs['divWidth'] = divWidth
@@ -298,7 +322,7 @@ function makeDefaultTableHeaders(frame, tournaments, deductions, headerHeight)
             columnIndex = columnIndex + 1
             if deductions[index] then
                 headerArgs = addDeductionArgs(headerArgs, deductions[index]['shortName'])
-                checkLastThreeHeaderCells(headerArgs, columnIndex, columnCount, divWidth)
+                appendDivToLastThreeHeaderCells(headerArgs, columnIndex, columnCount, divWidth)
                 headerArgs['translateY'] = translateY
                 headerArgs['divWidth'] = divWidth
                 expandedHeaderCell = makeHeaderCell(frame, headerArgs)
@@ -312,13 +336,13 @@ function makeDefaultTableHeaders(frame, tournaments, deductions, headerHeight)
 end
 
 --- Gets the string that goes in the tournament header cell.
--- Gets the string that goes in the tournament header cell.
--- @tparam table tournament
+-- 
+-- @tparam tournament tournament
 -- @return string title
 function getTournamentHeaderTitle(tournament)
     local title
     if tournament['link'] then
-        title = '[['..tournament['link']..tournament['shortName']..']]'
+        title = '[['..tournament['link']..'|'..tournament['shortName']..']]'
     else
         title = tournament['shortName']
     end
@@ -331,8 +355,8 @@ end
 -- @tparam number columnIndex
 -- @tparam number columnCount
 -- @tparam number divWidth
--- @return table headerArgs - the header arguments after modification according to the given index
-function checkLastThreeHeaderCells(headerArgs, columnIndex, columnCount, divWidth)
+-- @return table headerArgs the header arguments after modification according to the given index
+function appendDivToLastThreeHeaderCells(headerArgs, columnIndex, columnCount, divWidth)
     if columnIndex >= columnCount - 1 then
         if headerArgs['morecss'] then
             headerArgs['morecss'] = headerArgs['morecss']..'height:30px; margin-bottom:5px;'
@@ -347,17 +371,17 @@ end
 --- Expands the header cell template.
 -- Expands the header cell template using the provided arguments.
 -- @tparam frame frame
--- @tparam table args - the arguments to use while expanding the template
+-- @tparam table headerArgs
 -- @treturn string the expanded template
-function makeHeaderCell(frame, args)
-    return protectedExpansion(frame, 'User:XtratoS/World_Championship_Ranking_Table/Header/Cell', args)
+function makeHeaderCell(frame, headerArgs)
+    return protectedExpansion(frame, 'User:XtratoS/World_Championship_Ranking_Table/Header/Cell', headerArgs)
 end
 
 --- Modifies the header arguments for a deduction header cell.
 -- Modifies the header arguments for a deduction header cell, this function modifies the original provided headerArgs, use with caution
--- @tparam table headerArgs - the original header arguments
--- @tparam string title - the title to use in the cell header
--- @return table headerArgs - the header arguments after modification
+-- @tparam table headerArgs the original header arguments
+-- @tparam string title the title to use in the cell header
+-- @return table headerArgs the header arguments after modification
 function addDeductionArgs(headerArgs, title)
     headerArgs = {
         morecss = 'padding-left: 12px;',
@@ -366,32 +390,31 @@ function addDeductionArgs(headerArgs, title)
     return headerArgs
 end
 
---- Performs required queries to get entity points.
--- This function performs the required smw ask queries to get the points of an entity gained in a series of tournaments.
+--- Performs required queries to get a single team's points.
+-- This function performs the required smw ask queries to get the points of a team gained in a series of tournaments.
 -- @tparam frame frame
--- @tparam table entity
--- @tparam table tournaments - a table containing tournament data
--- @tparam string tournament.fullName - the full name of the tournament (as in the infobox)
--- @tparam string tournament.shortName - the display name of the tournament (as shown in the header of the table)
--- @tparam string tournament.type - 'tournament'
--- @tparam table deductions - a table containing data regarding the deductions columns
--- @return @{tournamentEntityQueryData}
-function queryRowDataFromSMW(frame, entity, tournaments, deductions)
+-- @tparam table team
+-- @tparam {tournament,...} tournaments
+-- @tparam {tournament,...} deductions
+-- @return @{tournamentTeamQueryData}
+function queryTeamPointsDataFromSMW(frame, team, tournaments, deductions)
     local prettyData = {
-        entity = entity
+        team = team
     }
     local totalPoints = 0
     local tournamentIndex = 1
 
     local columnIndex = 1
 
+    -- loop through all provided tournaments
     while tournaments[tournamentIndex] do
         local tournament = tournaments[tournamentIndex]
         if tournament['type'] == 'tournament' then
 
-            local queryResult = querySingleDataCellFromSMW(entity, tournament)
+            -- query for the points of the provided team in a single tournament
+            local queryResult = querySingleDataCellFromSMW(team, tournament)
 
-            -- handling the first query result if it exists
+            -- handle the first query result if it exists
             if queryResult[1] then
                 local r = queryResult[1]
                 local queryPoints = r['Has prizepoints']
@@ -401,21 +424,10 @@ function queryRowDataFromSMW(frame, entity, tournaments, deductions)
                     points = queryPoints,
                     placement = r['Has placement']
                 }
+            -- if there are no query results, check if the tournament has ended yet or not
             else
                 local currentDate = os.date('%Y-%m-%d')
-                local tournamentEndDate = tournament['endDate']
-                local tournamentPointsString
-                if tournamentEndDate then
-
-                    if (currentDate > tournamentEndDate) then
-                        tournamentPointsString = '-'
-                    else
-                        tournamentPointsString = ''
-                    end
-
-                else
-                    tournamentPointsString = ''
-                end
+                local tournamentPointsString = getTournamentPointsString(tournament, currentDate)
 
                 prettyData[columnIndex] = {
                     tournament = tournament,
@@ -424,19 +436,14 @@ function queryRowDataFromSMW(frame, entity, tournaments, deductions)
             end
 
             columnIndex = columnIndex + 1
-
+            -- if the tournament has a deductions column name value provided, then check if the provided team has any deductions from this tournaments' points
             if deductions[tournamentIndex] then
                 local deduction = deductions[tournamentIndex]
-                local points
-                if entity['deduction'..tournamentIndex] then
-                    points = entity['deduction'..tournamentIndex]
-                else
-                    points = 0
-                end
-                totalPoints = totalPoints - points
+                local deductionPoints = getTeamDeductionPointsByIndex(team, tournamentIndex)
+                totalPoints = totalPoints - deductionPoints
                 prettyData[columnIndex] = {
                     tournament = deduction,
-                    points = points
+                    points = deductionPoints
                 }
                 columnIndex = columnIndex + 1
             end
@@ -452,20 +459,52 @@ function queryRowDataFromSMW(frame, entity, tournaments, deductions)
     return prettyData
 end
 
+--- uses default values for tournaments which a team didn't get any points in
+-- @tparam tournament tournament
+-- @tparam string currentDate
+-- @treturn string tournamentPointsString
+function getTournamentPointsString(tournament, currentDate)
+    local tournamentEndDate = tournament['endDate']
+    local tempString
+    if tournamentEndDate then
+        -- use '-' if the tournament has ended, otherwise we leave the table cell blank
+        if (currentDate > tournamentEndDate) then
+            tempString = '-'
+        else
+            tempString = ''
+        end
+
+    else
+        tempString = ''
+    end
+    return tempString
+end
+
+--- gets the deduction points of a team for a single tournament.
+-- gets the deduction points of a team for a single tournament provided the tournament's index.
+-- @tparam teamData team
+-- @tparam number tournamentIndex the index of the tournament for which the deductions are returned
+-- @treturn number points the number of deduction points for the team in the tournament
+function getTeamDeductionPointsByIndex(team, tournamentIndex)
+    local points
+    if team['deduction'..tournamentIndex] then
+        points = team['deduction'..tournamentIndex]
+    else
+        points = 0
+    end
+    return points
+end
+
 --- Performs a SMW Ask Query.
--- Performs a SMW Ask Query to get the points of a given entity for a given tournament.
--- @tparam table entity
--- @tparam string entity.type
--- @tparam string entity.name
--- @tparam table tournament
--- @tparam string tournament.fullName
--- @return table queryResult - a table returned by mw.smw.ask() - returns an empty table if no results found
-function querySingleDataCellFromSMW(entity, tournament)
-    local entityType = entity['type']
+-- Performs a SMW Ask Query to get the points of a given team for a given tournament.
+-- @tparam teamData team
+-- @tparam tournament tournament
+-- @treturn table queryResult a table returned by mw.smw.ask(), returns an empty table if no results found
+function querySingleDataCellFromSMW(team, tournament)
     local tournamentIndex = tournament['index']
-    local entityName = getTournamentEntityName(entity, tournamentIndex)
+    local teamName = getTournamentTeamName(team, tournamentIndex)
     local tournamentName = tournament['fullName']
-    local queryString = '[[Has placement::+]] [[Has '.. entityType ..' page::' .. entityName .. ']] [[Has tournament name::' .. tournamentName .. ']]|?Has prizepoints|?Has tournament name|?Has placement|?Has date#ISO|limit=1'
+    local queryString = '[[Has placement::+]] [[Has team page::' .. teamName .. ']] [[Has tournament name::' .. tournamentName .. ']]|?Has prizepoints|?Has tournament name|?Has placement|?Has date#ISO|limit=1'
     local queryResult = mw.smw.ask(queryString)
     if queryResult then
         return queryResult
@@ -474,28 +513,27 @@ function querySingleDataCellFromSMW(entity, tournament)
     end
 end
 
---- Fetches the entity name for a specific tournament.
--- Fetches the entity name for a given tournament using the index of the tournament.
--- @tparam table entity
--- @tparam string entity.name
+--- Fetches the team name for a specific tournament.
+-- Fetches the team name for a given tournament using the index of the tournament.
+-- @tparam teamData team
 -- @tparam number index
--- @return string - the resolved name of the entity
-function getTournamentEntityName(entity, index)
-    local originalEntityName = entity['name']
-    local entityName
+-- @return string - the resolved name of the team
+function getTournamentTeamName(team, index)
+    local originalTeamName = team['name']
+    local teamName
 
-    if entity['alias' .. index] then
-        entityName = entity['alias' .. index]
+    if team['alias' .. index] then
+        teamName = team['alias' .. index]
     else
-        entityName = originalEntityName
+        teamName = originalTeamName
     end
 
-    return entityName
+    return teamName
 end
 
 --- Performs a SMW Ask Query to get a tournament date using its name
--- @tparam string tournamentName - the name of the tournament
--- @treturn string date - a string representing the ending date of the tournament in ISO Format (yyyy-mm-dd) if found, otherwise returns nil
+-- @tparam string tournamentName the name of the tournament
+-- @treturn string date a string representing the ending date of the tournament in ISO Format yyyy-mm-dd if found, otherwise returns nil
 function getTournamentEndDate(tournamentName)
     local query = mw.smw.ask('[[Category:Tournaments]] [[Has date::+]] [[Has name::'..tournamentName..']]|?Has date#ISO|?Has end date#ISO')
     if not query then
@@ -516,21 +554,19 @@ end
 -- Creates an html table wrapped in a div element and fills it with the data provided in the template arguments.
 -- @tparam frame frame
 -- @tparam table args the main template arguments
--- @tparam {{cellEntityData,...},...} data the data table that contains the entities' data
+-- @tparam {{cellTeamData,...},...} data the data table that contains the teams' data
 -- @tparam tournament tournaments a table that contains the tournaments data
 -- @tparam tournament deductions a table that contains the deduction columns' data
 -- @return node tableWrapper the node of the parent div which wraps the table node, this node contains all the html that renders the table
-function makeHTMLTable(frame, args, data, tournaments, deductions)
+function makePointsTable(frame, args, data, tournaments, deductions)
     local tableWidth = args['width']
     local columnCount = countEntries(tournaments) + countEntries(deductions)
-    local headerHeight = args['header-height']
-    local tableWrapper = createTableWrapper(tableWidth, columnCount, headerHeight)
+    local tableWrapper = createTableWrapper(tableWidth, columnCount)
     local htmlTable = createTableTag(tableWrapper)
 
     local customTableHeader = args['custom-header']
-    addTableHeader(frame, htmlTable, customTableHeader, tournaments, deductions, headerHeight)
+    addTableHeader(frame, htmlTable, customTableHeader, tournaments, deductions)
 
-    local entityType = args['entities']
     renderTableBody(frame, htmlTable, data)
 
     htmlTable:done()
@@ -542,11 +578,10 @@ end
 -- Creates a div which wraps the table node to make it mobile friendly.
 -- @tparam number tableWidth - the width of the table node
 -- @tparam number columnCount - the number of tournament columns
--- @tparam number headerHeight - the height on the header row
 -- @return node div - the secondary wrapper which wraps the table and is wrapped inside the primary wrapper, the primary wrapper is the wrapper which should be returned by the main fucntion
-function createTableWrapper(tableWidth, columnCount, headerHeight)
+function createTableWrapper(tableWidth, columnCount)
     if not tableWidth then
-        tableWidth = 312 + 50 * (columnCount) + headerHeight
+        tableWidth = 312 + 50 * (columnCount) + gConfig['headerHeight']
     end
     local tableWrapper = mw.html.create('div')
     tableWrapper
@@ -574,20 +609,18 @@ function createTableTag(tableWrapper)
 end
 
 --- Adds the table header to the html table.
--- Adds the table header to the html table.
 -- @tparam frame frame
 -- @tparam node htmlTable
 -- @tparam string customHeader
 -- @tparam {tournament,...} tournaments
 -- @tparam table deductions
--- @tparam number headerHeight
 -- @return nil
-function addTableHeader(frame, htmlTable, customHeader, tournaments, deductions, headerHeight)
+function addTableHeader(frame, htmlTable, customHeader, tournaments, deductions)
     local tableHeader
     if customHeader then
         tableHeader = customHeader
     else
-        tableHeader = makeDefaultTableHeaders(frame, tournaments, deductions, headerHeight)
+        tableHeader = makeDefaultTableHeaders(frame, tournaments, deductions)
     end
     htmlTable:node(tableHeader)
 end
@@ -601,21 +634,30 @@ end
 function renderTableBody(frame, htmlTable, data)
     local apparentPosition = 1
     local previousPoints = -1
+    local rowCounter = 0
     local currentPoints
-    for i, dataRow in pairs(data) do
+    for _, dataRow in pairs(data) do
         currentPoints = dataRow['total']['totalPoints']
         if previousPoints then
             if currentPoints > previousPoints then
                 apparentPosition = apparentPosition
             end
         end
+
         dataRow['position'] = {
             position = apparentPosition
         }
-        local entityType = dataRow['entity']['type']
-        local htmlRow = renderRow(frame, entityType, dataRow)
-        htmlTable:node(htmlRow)
+
+        local tableRow = renderRow(frame, dataRow)
+        htmlTable:node(tableRow)
         apparentPosition = apparentPosition + 1
+        rowCounter = rowCounter + 1
+        if gConfig['limit'] then
+            local limit = gConfig['limit']
+            if rowCounter >= limit then
+                return
+            end
+        end
     end
 end
 
@@ -654,21 +696,17 @@ end
 --- Renders an html row from row arguments.
 -- Renders an html tr element from arguments table.
 -- @tparam frame frame
--- @tparam string entityType
--- @tparam table rowArgs
+-- @tparam cellTeamData rowArgs
 -- @return mw.html tr - table row represented by an mw.html object
-function renderRow(frame, entityType, rowArgs)
-    local entityName = rowArgs['entity']['name']
-    -- table row
+function renderRow(frame, rowArgs)
+    local teamName = rowArgs['team']['name']
+
     local row = mw.html.create('tr')
 
-    -- position cell
-    makePositionCell(row, rowArgs)    
+    makePositionCell(row, rowArgs)
 
-    -- entity cell
-    makeEntityCell(frame, row, rowArgs)
+    makeTeamCell(frame, row, rowArgs)
 
-    -- total points cell
     makeTotalPointsCell(row, rowArgs)
 
     -- the rest of the cells
@@ -694,79 +732,82 @@ function renderRow(frame, entityType, rowArgs)
     return row
 end
 
---- Creates the cell which shows the position of the entity.
--- Creates the cell which shows the position of the entity and adds it to the given row.
+--- Creates the cell which shows the position of the team.
+-- Creates the cell which shows the position of the team and adds it to the given row.
 -- @tparam node row the mw.html row node to add the cell to
--- @tparam {cellEntityData,...} rowArgs
+-- @tparam {cellTeamData,...} rowArgs
 -- @return nil
 function makePositionCell(row, rowArgs)
     local td = row:tag('td')
     td
         :css('font-weight', 'bold')
-        :wikitext(rowArgs['position']['position']..'.')
+    if gConfig['started'] == true then
+        td:wikitext(rowArgs['position']['position']..'.')
+    else
+        td:wikitext('.')
+    end
     
     styleItem(td, rowArgs['cssArgs'], 1)
         :done()
 end
 
---- Creates the cell which shows the name of the entity.
--- Creates the cell which shows the name of the entity and adds it to the given row.
+--- Creates the cell which shows the name of the team.
+-- Creates the cell which shows the name of the team and adds it to the given row.
 -- @tparam frame frame
 -- @tparam node row the mw.html row node to add the cell to
--- @tparam {cellEntityData,...} rowArgs
+-- @tparam {cellTeamData,...} rowArgs
 -- @return nil
-function makeEntityCell(frame, row, rowArgs)
+function makeTeamCell(frame, row, rowArgs)
     local td = row:tag('td')
-    local expandedEntity
+    local expandedTeam
     local displayTemplate
     local strike
-    local entityType = rowArgs['entity']['type']
-    local entityName = rowArgs['entity']['name']
+    local teamName = rowArgs['team']['name']
 
-    if rowArgs['entity']['displayTemplate'] then
-        displayTemplate = rowArgs['entity']['displayTemplate']
+    if rowArgs['team']['displayTemplate'] then
+        displayTemplate = rowArgs['team']['displayTemplate']
     else
         displayTemplate = 'Team'
     end
-    if rowArgs['entity']['strikeThrough'] then
+    if rowArgs['team']['strikeThrough'] then
         strike = true
     end
-    if entityType == 'team' then
-        expandedEntity = protectedExpansion(frame, displayTemplate, {entityName})
-    end
+    expandedTeam = protectedExpansion(frame, displayTemplate, {teamName})
     if strike then
-        expandedEntity = '<s>'..expandedEntity..'</s>'
+        expandedTeam = '<s>'..expandedTeam..'</s>'
     end
     td
         :css('text-align', 'left')
         :css('overflow', 'hidden')
         :css('max-width', '225px')
-        :wikitext(expandedEntity)
+        :wikitext(expandedTeam)
     
     styleItem(td, rowArgs['cssArgs'], 2)
         :done()
 end
 
---- Creates the cell which shows the total number of points of the entity.
--- Creates the cell which shows the total number of points of the entity and adds it to the given row.
+--- Creates the cell which shows the total number of points of the team.
+-- Creates the cell which shows the total number of points of the team and adds it to the given row.
 -- @tparam node row the mw.html row node to add the cell to
--- @tparam {cellEntityData,...} rowArgs
+-- @tparam {cellTeamData,...} rowArgs
 -- @return nil
 function makeTotalPointsCell(row, rowArgs)
     local td = row:tag('td')
     td
         :css('font-weight', 'bold')
-        :wikitext(rowArgs['total']['totalPoints'])
-    
+    if gConfig['started'] == true then
+        td:wikitext(rowArgs['total']['totalPoints'])
+    end
+
     styleItem(td, rowArgs['cssArgs'], 3)
         :done()
 end
 
---- Creates the cell which shows the number of points of the entity for a single tournament.
--- Creates the cell which shows the number of points of the entity for a single tournament and adds it to the given row.
+--- Creates the cell which shows the number of points of the team for a single tournament.
+-- Creates the cell which shows the number of points of the team for a single tournament and adds it to the given row.
 -- @tparam node row the mw.html row node to add the cell to
--- @tparam {cellEntityData,...} rowArgs
--- @tparam cellEntityData cell
+-- @tparam {cellTeamData,...} rowArgs
+-- @tparam cellTeamData cell
 -- @tparam number c the index of the column counting from the position cell as 1
 -- @return nil
 function makeTournamentPointsCell(row, rowArgs, cell, c)
@@ -775,16 +816,24 @@ function makeTournamentPointsCell(row, rowArgs, cell, c)
     styleItem(td, rowArgs['cssArgs'], c):done()
 end
 
+--- Creates the cell which shows the number of points deducted from an team for a single column.
+-- Creates the cell which shows the number of points deducted from an team for a single column and adds it to the given row.
+-- @tparam frame frame
+-- @tparam node row the mw.html row node to add the cell to
+-- @tparam {cellTeamData,...} rowArgs
+-- @tparam cellTeamData cell
+-- @tparam number c the index of the column counting from the position cell as 1
+-- @return nil
 function makeDeductionPointsCell(frame, row, rowArgs, cell, c)
     local td = row:tag('td')
-    local entityName = rowArgs['entity']['name']
+    local teamName = rowArgs['team']['name']
     td:css('padding', '3px')
     local label
     if cell['points'] > 0 then
         label = protectedExpansion(frame, 'Popup', {
             label = -cell['points'],
             title = 'Point Deductions ('..cell['tournament']['tournamentName']..')',
-            content = frame:preprocess('{{#lst:{{FULLPAGENAME}}|'..entityName..'-c'..c..'}}')
+            content = frame:preprocess('{{#lst:{{FULLPAGENAME}}|'..teamName..'-c'..c..'}}')
         })
     else
         label = ''
@@ -833,29 +882,36 @@ end
 
 return p
 
+--- a table team contains some teamData.
+-- @tfield string name the name of the team - case sensitive
+-- @tfield string aliasX the alias of the team for tournament X - case sensitive
+-- @tfield number deductionX the deduction points for this team in tournament X
+-- @tfield string displayTemplate the name of the template to use when rendering the team cell
+-- @table teamData
+
 --- a tournament table that represents a single tournament.
--- @tfield number index - the index of the tournament as provided in main template arguments
--- @tfield string fullName - the full name of the tournament as mentioned in the infobox
--- @tfield string shortName - the tourname name which shows up in the table header
--- @tfield string link - the link to the tournament page
--- @tfield string type - the type of the tournament ('tournament' or 'deduction')
--- @tfield string endDate - the end date of the tournament in the format yyyy-mm-dd
+-- @tfield number index the index of the tournament as provided in main template arguments
+-- @tfield string fullName the full name of the tournament as mentioned in the infobox
+-- @tfield string shortName the tourname name which shows up in the table header
+-- @tfield string link the link to the tournament page
+-- @tfield string type the type of the tournament ('tournament' or 'deduction')
+-- @tfield string endDate the end date of the tournament in the format yyyy-mm-dd
 -- @table tournament
 
---- a table that contains the entity data for a single tournament.
+--- a table that contains the team data for a single tournament.
 -- @tfield table tournament - a reference to the table (the tournament/deduction) which is represented by this data entry
--- @tfield table entity - a reference to an entity
--- @tfield number points - the points of the entity in this entry
--- @tfield table total - a table containing the total points of this entity
--- @table tournamentEntityQueryData
+-- @tfield table team - a reference to an team
+-- @tfield number points - the points of the team in this entry
+-- @tfield table total - a table containing the total points of this team
+-- @table tournamentTeamQueryData
 
---- same as @{tournamentEntityQueryData} in addition to @{cssData}.
+--- same as @{tournamentTeamQueryData} in addition to @{cssData}.
 -- @tfield table tournament - a reference to the table (the tournament/deduction) which is represented by this data entry
--- @tfield table entity - a reference to an entity
--- @tfield number points - the points of the entity in this entry
--- @tfield table total - a table containing the total points of this entity
+-- @tfield table team - a reference to an team
+-- @tfield number points - the points of the team in this entry
+-- @tfield table total - a table containing the total points of this team
 -- @tfield cssData cssArgs
--- @table cellEntityData
+-- @table cellTeamData
 
 --- a table that contains cssData to style the table.
 -- @tfield string bg backgroud color for the whole row
