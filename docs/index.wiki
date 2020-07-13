@@ -1,467 +1,310 @@
 ==Functions==
-
 ===p.main (frame)===
 *Entry point. This is the entry point of the Module.
 *Parameters:
-
 **frame frame
-
 *Returns:
-
 **mw.html div tableWrapper 
-
 ===MandatoryInputArgsExist (args)===
 *Checks for mandatory inputs and throws an error if any of them isn't provided.
 *Parameters:
-
 **args table the main template arguments
-
 *Returns:
-
 **nil 
-
 ===setUnprovidedArgsToDefault (args)===
 *Sets the unprovided arguments to default value.
 *Parameters:
-
 **args table the main template arguments
-
 *Returns:
-
 **nil 
-
 ===setGlobalConfig (args)===
 *Sets the global configuration variables.
 *Parameters:
-
 **args table the main template arguments
-
 *Returns:
-
 **nil 
-
 ===sortData (a, b)===
 *Custom sorting function. Sorts the teams by their total points then names in-case of a tie.
 *Parameters:
-
 **a table
 **b table
-
 ===fetchTournamentData (args)===
 *Fetches the tournament arguments provided. through tournamentX and deductionsX then returns the result in 2 separate tables one for the tournaments and one for the deductions.
 *Parameters:
-
 **args table the main template arguments
-
 *Returns:
-
 **{tournament,...} a table of tournaments
 **{tournament,...} a table of deductions
-
 ===fetchTeamData (args, numberOfTournaments)===
 *Fetches the teams' data. Fetches the table of teams provided by the main arguments to the template that invokes this module - case sensitive.
 *Parameters:
-
 **args table the main template arguments
 **numberOfTournaments number the number of tournaments to check aliases for
-
 *Returns:
-
 **table teams a table that contains data about teams; their name, aliases and point deductions in any of the tournaments 
-
 ===expandSubTemplates (args)===
 *Expands the sub-templates' args. Expands the args provided to any of the sub-templates to the args of the main template changing the keys accordingly.
 *Parameters:
-
 **args table the main template arguments
-
 *Returns:
-
 **table the arguments after adding the expanded arguments 
-
 ===attachStylingDataToMainData (args, data, teams)===
 *Attaches styling data. Attaches the styling data to the main data, uses the teams' names to get the corresponding styling data from the main arguments if they exist, then attaches this data to the given data table.
 *Parameters:
-
 **args table the main template arguments
 **data tournamentTeamQueryData the data table to which the css data is to be attached
 **teams table the table that contains the teams data
-
 *Returns:
-
 **nil 
-
 ===attachPositionBackgroundColorsToCells (args, data, teams)===
 *Attaches the position background colors to the main data table. Attaches the position background colors to the main data table.
 *Parameters:
-
 **args table the main template arguments
-**data {{cellTeamData,...},...}
+**data { {cellTeamData,...},...}
 **teams table
-
 *Returns:
-
 **nil 
-
 ===split (s, delim)===
 *Splits string a by a delim. Splits string a by a delimiter and returns a table of all resulting words.
 *Parameters:
-
 **s string
 **delim string
-
 *Returns:
-
 **{string,...} words a table containing the split up words 
-
 ===makeDefaultTableHeaders (frame, tournaments, deductions)===
 *Creates the html code required to make the table header. This function creates the html code required to make the table header, actually expands another template that contains hard-coded html with some variables, as the headers hardly change.
 *Parameters:
-
 **frame frame
 **tournaments {tournament,...}
 **deductions {tournament,...}
-
 *Returns:
-
 **node row the expanded mw.html table row for the headers 
-
 ===getTournamentHeaderTitle (tournament)===
 *Gets the string that goes in the tournament header cell.
 *Parameters:
-
 **tournament tournament
-
 *Returns:
-
 **string title 
-
 ===appendDivToLastThreeHeaderCells (headerArgs, columnIndex, columnCount, divWidth)===
 *Applies additional special styling for the last three header cell. This function modifies the original provided header arguments, use with caution.
 *Parameters:
-
 **headerArgs table
 **columnIndex number
 **columnCount number
 **divWidth number
-
 *Returns:
-
 **table headerArgs the header arguments after modification according to the given index 
-
 ===makeHeaderCell (frame, headerArgs)===
 *Expands the header cell template. Expands the header cell template using the provided arguments.
 *Parameters:
-
 **frame frame
 **headerArgs table
-
 *Returns:
-
 **string the expanded template 
-
 ===addDeductionArgs (headerArgs, title)===
 *Modifies the header arguments for a deduction header cell. Modifies the header arguments for a deduction header cell, this function modifies the original provided headerArgs, use with caution
 *Parameters:
-
 **headerArgs table the original header arguments
 **title string the title to use in the cell header
-
 *Returns:
-
 **table headerArgs the header arguments after modification 
-
 ===queryTeamPointsDataFromSMW (frame, team, tournaments, deductions)===
 *Performs required queries to get a single team's points. This function performs the required smw ask queries to get the points of a team gained in a series of tournaments.
 *Parameters:
-
 **frame frame
 **team table
 **tournaments {tournament,...}
 **deductions {tournament,...}
-
 *Returns:
-
 **tournamentTeamQueryData 
-
 ===getTournamentPointsString (tournament, currentDate)===
 *uses default values for tournaments which a team didn't get any points in
 *Parameters:
-
 **tournament tournament
 **currentDate string
-
 *Returns:
-
 **string tournamentPointsString 
-
 ===getTeamDeductionPointsByIndex (team, tournamentIndex)===
 *gets the deduction points of a team for a single tournament. gets the deduction points of a team for a single tournament provided the tournament's index.
 *Parameters:
-
 **team teamData
 **tournamentIndex number the index of the tournament for which the deductions are returned
-
 *Returns:
-
 **number points the number of deduction points for the team in the tournament 
-
 ===querySingleDataCellFromSMW (team, tournament)===
 *Performs a SMW Ask Query. Performs a SMW Ask Query to get the points of a given team for a given tournament.
 *Parameters:
-
 **team teamData
 **tournament tournament
-
 *Returns:
-
 **table queryResult a table returned by mw.smw.ask(), returns an empty table if no results found 
-
 ===getTournamentTeamName (team, index)===
 *Fetches the team name for a specific tournament. Fetches the team name for a given tournament using the index of the tournament.
 *Parameters:
-
 **team teamData
 **index number
-
 *Returns:
-
 **string - the resolved name of the team 
-
 ===getTournamentEndDate (tournamentName)===
 *Performs a SMW Ask Query to get a tournament date using its name
 *Parameters:
-
 **tournamentName string the name of the tournament
-
 *Returns:
-
 **string date a string representing the ending date of the tournament in ISO Format yyyy-mm-dd if found, otherwise returns nil 
-
 ===makePointsTable (frame, args, data, tournaments, deductions)===
 *Creates an html table. Creates an html table wrapped in a div element and fills it with the data provided in the template arguments.
 *Parameters:
-
 **frame frame
 **args table the main template arguments
-**data {{cellTeamData,...},...} the data table that contains the teams' data
+**data { {cellTeamData,...},...} the data table that contains the teams' data
 **tournaments tournament a table that contains the tournaments data
 **deductions tournament a table that contains the deduction columns' data
-
 *Returns:
-
 **node tableWrapper the node of the parent div which wraps the table node, this node contains all the html that renders the table 
-
 ===createTableWrapper (tableWidth, columnCount)===
 *Creates a div. Creates a div which wraps the table node to make it mobile friendly.
 *Parameters:
-
 **tableWidth number - the width of the table node
 **columnCount number - the number of tournament columns
-
 *Returns:
-
 **node div - the secondary wrapper which wraps the table and is wrapped inside the primary wrapper, the primary wrapper is the wrapper which should be returned by the main fucntion 
-
 ===createTableTag (tableWrapper)===
 *Creates a table node. Creates the main table node.
 *Parameters:
-
 **tableWrapper node - the node which wraps this table node
-
 *Returns:
-
 **node htmlTable 
-
 ===addTableHeader (frame, htmlTable, customHeader, tournaments, deductions)===
 *Adds the table header to the html table.
 *Parameters:
-
 **frame frame
 **htmlTable node
 **customHeader string
 **tournaments {tournament,...}
 **deductions table
-
 *Returns:
-
 **nil 
-
 ===renderTableBody (frame, htmlTable, data)===
 *Creates the table body. Creates the table body and attaches it to the provided htmlTable node.
 *Parameters:
-
 **frame frame
 **htmlTable node
 **data table
-
 *Returns:
-
 **nil 
-
 ===styleItem (item, args, c)===
 *Styles the background, foreground and font-weight of an element. Adds css styling for background-color, color and font-weight of an mw.html element.
 *Parameters:
-
 **item node mw.html object
 **args cssData css styling arguments
 **c number the column number
-
 *Returns:
-
 **node item the item after applying the styling rules 
-
 ===renderRow (frame, rowArgs)===
 *Renders an html row from row arguments. Renders an html tr element from arguments table.
 *Parameters:
-
 **frame frame
 **rowArgs cellTeamData
-
 *Returns:
-
 **mw.html tr - table row represented by an mw.html object 
-
 ===makePositionCell (row, rowArgs)===
 *Creates the cell which shows the position of the team. Creates the cell which shows the position of the team and adds it to the given row.
 *Parameters:
-
 **row node the mw.html row node to add the cell to
 **rowArgs {cellTeamData,...}
-
 *Returns:
-
 **nil 
-
 ===makeTeamCell (frame, row, rowArgs)===
 *Creates the cell which shows the name of the team. Creates the cell which shows the name of the team and adds it to the given row.
 *Parameters:
-
 **frame frame
 **row node the mw.html row node to add the cell to
 **rowArgs {cellTeamData,...}
-
 *Returns:
-
 **nil 
-
 ===makeTotalPointsCell (row, rowArgs)===
 *Creates the cell which shows the total number of points of the team. Creates the cell which shows the total number of points of the team and adds it to the given row.
 *Parameters:
-
 **row node the mw.html row node to add the cell to
 **rowArgs {cellTeamData,...}
-
 *Returns:
-
 **nil 
-
 ===makeTournamentPointsCell (row, rowArgs, cell, c)===
 *Creates the cell which shows the number of points of the team for a single tournament. Creates the cell which shows the number of points of the team for a single tournament and adds it to the given row.
 *Parameters:
-
 **row node the mw.html row node to add the cell to
 **rowArgs {cellTeamData,...}
 **cell cellTeamData
 **c number the index of the column counting from the position cell as 1
-
 *Returns:
-
 **nil 
-
 ===makeDeductionPointsCell (frame, row, rowArgs, cell, c)===
 *Creates the cell which shows the number of points deducted from an team for a single column. Creates the cell which shows the number of points deducted from an team for a single column and adds it to the given row.
 *Parameters:
-
 **frame frame
 **row node the mw.html row node to add the cell to
 **rowArgs {cellTeamData,...}
 **cell cellTeamData
 **c number the index of the column counting from the position cell as 1
-
 *Returns:
-
 **nil 
-
 ===countEntries (t)===
 *Counts the entries in a table.
 *Parameters:
-
 **t table
-
 *Returns:
-
 **number count - the number of keys in the table 
-
 ===protectedExpansion (frame, title, args)===
 *Safely expands a template. Expands a template while making sure a missing template doesn't stop the code execution.
 *Parameters:
-
 **frame frame
 **title string
 **args table
-
 *Returns:
-
 **string the expansion if exists, else error message 
-
 ===expandTemplate (frame, title, args)===
 *Expands a template. Expands a template using a frame and returns the result of the expansion.
 *Parameters:
-
 **frame frame
 **title string
 **args table
-
 *Returns:
-
 **string the expanded template 
-
 ==Tables==
-
 ===teamData===
 *a table team contains some teamData.
 *Fields:
-
 **name string the name of the team - case sensitive
 **aliasX string the alias of the team for tournament X - case sensitive
 **deductionX number the deduction points for this team in tournament X
 **displayTemplate string the name of the template to use when rendering the team cell
-
 ===tournament===
 *a tournament table that represents a single tournament.
 *Fields:
-
 **index number the index of the tournament as provided in main template arguments
 **fullName string the full name of the tournament as mentioned in the infobox
 **shortName string the tourname name which shows up in the table header
 **link string the link to the tournament page
-===**type string the type of the tournament ('tournament' or 'deduction')===
+**type string the type of the tournament - 'tournament' or 'deduction'
 **endDate string the end date of the tournament in the format yyyy-mm-dd
-
 ===tournamentTeamQueryData===
 *a table that contains the team data for a single tournament.
 *Fields:
-
 **tournament table - a reference to the table (the tournament/deduction) which is represented by this data entry
 **team table - a reference to an team
 **points number - the points of the team in this entry
 **total table - a table containing the total points of this team
-
 ===cellTeamData===
 *same as tournamentTeamQueryData in addition to cssData.
 *Fields:
-
 **tournament table - a reference to the table (the tournament/deduction) which is represented by this data entry
 **team table - a reference to an team
 **points number - the points of the team in this entry
 **total table - a table containing the total points of this team
 **cssArgs cssData
-
 ===cssData===
 *a table that contains cssData to style the table.
 *Fields:
-
 **bg string backgroud color for the whole row
 **fg string foreground color for the whole row
 **bold string for the whole row

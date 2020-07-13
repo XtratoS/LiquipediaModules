@@ -894,7 +894,7 @@ return p
 -- @tfield string fullName the full name of the tournament as mentioned in the infobox
 -- @tfield string shortName the tourname name which shows up in the table header
 -- @tfield string link the link to the tournament page
--- @tfield string type the type of the tournament ('tournament' or 'deduction')
+-- @tfield string type the type of the tournament - 'tournament' or 'deduction'
 -- @tfield string endDate the end date of the tournament in the format yyyy-mm-dd
 -- @table tournament
 
