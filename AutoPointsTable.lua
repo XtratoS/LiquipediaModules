@@ -11,7 +11,7 @@
 local p = {} --p stands for package
 
 local getArgs = require('Module:Arguments').getArgs
-local tprint = require('Module:Sandbox/TablePrinter').tprint
+local tprint = require('Module:TablePrinter').tprint
 
 local SIN_45_DEG = math.floor(math.sin(math.rad(45))*100) / 100
 local gConfig = {}
@@ -39,7 +39,7 @@ function p.main(frame)
 
     local tableData = {}
     for i, team in pairs(teams) do
-        local teamPointsData = queryTeamPointsDataFromSMW(frame, team, tournaments, deductions)
+        local teamPointsData = getTeamPointsData(team, tournaments, deductions)
         tableData[i] = teamPointsData
     end
     
@@ -52,7 +52,7 @@ function p.main(frame)
     local pointsTable = makePointsTable(frame, args, tableData, tournaments, deductions)
 
     return pointsTable
-    -- return tprint(data)
+    -- return tprint(tableData)
 
 end
 
@@ -72,30 +72,45 @@ function setUnprovidedArgsToDefault(args)
     if not args['header-height'] then
         args['header-height'] = 100
     end
+    if args['width'] then
+        gConfig['width'] = args['width']
+    else
+        if args['minified'] == 'true' then
+            gConfig['width'] = 45 + 225 + 75
+        end
+    end
+    if args['concept'] then
+        gConfig['concept'] = args['concept']
+    else
+        gConfig['concept'] = 'Prizepoint_subobjects'
+    end
 end
 
 --- Sets the global configuration variables.
 -- @tparam table args the main template arguments
 -- @return nil
 function setGlobalConfig(args)
-    if args['started'] then 
-        if args['started'] == 'true' then
-            gConfig['started'] = true
+    for _, configProp in pairs({
+        'started',
+        'bg>pbg',
+        'minified'
+    }) do
+        if args[configProp] == 'true' then
+            gConfig[configProp] = true
         else
-            gConfig['started'] = false
+            gConfig[configProp] = false
         end
     end
     if args['limit'] then
         gConfig['limit'] = tonumber(args['limit'])
     end
     gConfig['headerHeight'] = args['header-height']
-    gConfig['bg>pbg'] = args['bg>pbg']
 end
 
 --- Custom sorting function.
 -- Sorts the teams by their total points then names in-case of a tie.
--- @tparam table a
--- @tparam table b
+-- @tparam teamPoints a
+-- @tparam teamPoints b
 function sortData(a, b)
     local totalPointsA = a['total']['totalPoints']
     local totalPointsB = b['total']['totalPoints']
@@ -121,13 +136,23 @@ function fetchTournamentData(args)
     while args['tournament'..i] do
         local tournamentFullName = args['tournament'..i]
         local tournamentShortName = args['tournament'..i..'name']
+        local finished
+        if args['tournament'..i..'finished'] then
+            if args['tournament'..i..'finished'] == 'true' then
+                finished = true
+            else
+                finished = false
+            end
+        else
+            finished = false
+        end
         tournaments[i] = {
             index = i,
             fullName = tournamentFullName,
             shortName = tournamentShortName,
             link = args['tournament'..i..'link'],
             type = 'tournament',
-            endDate = getTournamentEndDate(tournamentFullName)
+            finished = finished
         }
         if args['deductions'..i] then
             deductionShortName = args['deductions'..i]
@@ -213,7 +238,7 @@ end
 -- uses the teams' names to get the corresponding styling data from the main arguments if they exist,
 -- then attaches this data to the given data table.
 -- @tparam table args the main template arguments
--- @tparam tournamentTeamQueryData data the data table to which the css data is to be attached
+-- @tparam teamPoints data the data table to which the css data is to be attached
 -- @tparam table teams the table that contains the teams data
 -- @return nil
 function attachStylingDataToMainData(args, data, teams)
@@ -263,7 +288,7 @@ function attachPositionBackgroundColorsToCells(args, data, teams)
                 if (not cssArgs['bg1']) and (not cssArgs['bg']) then
                     cssArgs['bg1'] = pbgColor
                 else
-                    if ShouldOverwrite ~= 'true' then
+                    if ShouldOverwrite ~= true then
                         cssArgs['bg1'] = pbgColor
                     end
                 end
@@ -298,12 +323,22 @@ function makeDefaultTableHeaders(frame, tournaments, deductions)
     local row = mw.html.create('tr')
     local divWidth = math.ceil(headerHeight * SIN_45_DEG * 2) + 1
     local translateY = (headerHeight - 50) / 2
-    local expandedHeaderStart = protectedExpansion(frame, 'User:XtratoS/World_Championship_Ranking_Table/Header/Start', {
+    local headerStartTemplate
+    if gConfig['minified'] == true then
+        headerStartTemplate = 'RankingsTable/MinifiedHeaderStart'
+    else
+        headerStartTemplate = 'RankingsTable/HeaderStart'
+    end
+    local expandedHeaderStart = protectedExpansion(frame, headerStartTemplate, {
         translateY = translateY - 26,
         divWidth = divWidth,
         height = headerHeight
     })
     row:node(expandedHeaderStart)
+    if gConfig['minified'] == true then
+        row:done()
+        return row
+    end
     local columnIndex = 1
     local columnCount = countEntries(tournaments) + countEntries(deductions)
     for index, tournament in pairs(tournaments) do
@@ -374,7 +409,7 @@ end
 -- @tparam table headerArgs
 -- @treturn string the expanded template
 function makeHeaderCell(frame, headerArgs)
-    return protectedExpansion(frame, 'User:XtratoS/World_Championship_Ranking_Table/Header/Cell', headerArgs)
+    return protectedExpansion(frame, 'RankingsTable/HeaderCell', headerArgs)
 end
 
 --- Modifies the header arguments for a deduction header cell.
@@ -390,14 +425,12 @@ function addDeductionArgs(headerArgs, title)
     return headerArgs
 end
 
---- Performs required queries to get a single team's points.
--- This function performs the required smw ask queries to get the points of a team gained in a series of tournaments.
--- @tparam frame frame
+--- Fetches the points of a team for the given tournaments.
 -- @tparam table team
 -- @tparam {tournament,...} tournaments
 -- @tparam {tournament,...} deductions
--- @return @{tournamentTeamQueryData}
-function queryTeamPointsDataFromSMW(frame, team, tournaments, deductions)
+-- @return @{teamPoints}
+function getTeamPointsData(team, tournaments, deductions)
     local prettyData = {
         team = team
     }
@@ -406,28 +439,22 @@ function queryTeamPointsDataFromSMW(frame, team, tournaments, deductions)
 
     local columnIndex = 1
 
-    -- loop through all provided tournaments
+    local tournamentQueryResults = queryTeamResultsFromSMW(team, tournaments)
+
     while tournaments[tournamentIndex] do
         local tournament = tournaments[tournamentIndex]
         if tournament['type'] == 'tournament' then
-
-            -- query for the points of the provided team in a single tournament
-            local queryResult = querySingleDataCellFromSMW(team, tournament)
-
-            -- handle the first query result if it exists
-            if queryResult[1] then
-                local r = queryResult[1]
-                local queryPoints = r['Has prizepoints']
+            if tournamentQueryResults and tournamentQueryResults[tournamentIndex] then
+                local queryResult = tournamentQueryResults[tournamentIndex]
+                local queryPoints = queryResult['prizepoints']
                 totalPoints = totalPoints + queryPoints
                 prettyData[columnIndex] = {
                     tournament = tournament,
                     points = queryPoints,
-                    placement = r['Has placement']
+                    placement = queryResult['placement']
                 }
-            -- if there are no query results, check if the tournament has ended yet or not
             else
-                local currentDate = os.date('%Y-%m-%d')
-                local tournamentPointsString = getTournamentPointsString(tournament, currentDate)
+                local tournamentPointsString = getTournamentPointsString(tournament)
 
                 prettyData[columnIndex] = {
                     tournament = tournament,
@@ -459,21 +486,80 @@ function queryTeamPointsDataFromSMW(frame, team, tournaments, deductions)
     return prettyData
 end
 
---- uses default values for tournaments which a team didn't get any points in
--- @tparam tournament tournament
--- @tparam string currentDate
--- @treturn string tournamentPointsString
-function getTournamentPointsString(tournament, currentDate)
-    local tournamentEndDate = tournament['endDate']
-    local tempString
-    if tournamentEndDate then
-        -- use '-' if the tournament has ended, otherwise we leave the table cell blank
-        if (currentDate > tournamentEndDate) then
-            tempString = '-'
-        else
-            tempString = ''
+--- Performs the required SMW Queries to get the team prize points for all tournaments provided.
+-- @tparam team team
+-- @tparam {tournament,...} tournaments
+-- @treturn ?|nil|{prettyResult,...} prettyResults
+function queryTeamResultsFromSMW(team, tournaments)
+    local conceptString = '[[Concept:'..gConfig['concept']..']] '
+    local teamString = team['name']
+    for teamArgKey, teamArgValue in pairs(team) do
+        if string.find(teamArgKey, 'alias') then
+            teamString = teamString .. '||' .. teamArgValue
         end
+    end
+    teamString = '[[Has team page::'..teamString..']] '
 
+    local queryResults = mw.smw.ask(conceptString..teamString..'|?Has prizepoints|?Has tournament name|?Has team page|?Has placement')
+
+    if queryResults then
+        local prettyResults = {}
+        for _, result in pairs(queryResults) do
+            local tournamentName = result['Has tournament name']
+            local tournamentIndex = getIndexByName(tournaments, tournamentName)
+            if tournamentIndex then
+                local teamAlias
+                if team['alias'..tournamentIndex] then
+                    teamAlias = team['alias'..tournamentIndex]
+                else
+                    teamAlias = team['name']
+                end
+                local resultTeamName = teamNameFromTeamPage(result['Has team page'])
+                if teamAlias == resultTeamName then
+                    prettyResults[tournamentIndex] = {
+                        tournamentName = tournamentName,
+                        teamName = teamAlias,
+                        prizepoints = result['Has prizepoints'],
+                        placement = result['Has placement']
+                    }
+
+                end
+            end
+        end
+        return prettyResults
+    else
+        return nil
+    end
+end
+
+--- Fetches the team name from the team page string.
+-- @tparam string teamPage
+-- @return string teamName
+function teamNameFromTeamPage(teamPage)
+    local teamName = split(teamPage, '|')[2]
+    return string.sub(teamName, 1, -3)
+end
+
+--- Fetches a tournament index from a tournaments table using tournament fullName.
+-- @tparam {tournament,...} tournaments
+-- @tparam string tournamentName
+-- @return ?|nil|number tournamentIndex
+function getIndexByName(tournaments, tournamentName)
+    for _, tournament in pairs(tournaments) do
+        if tournament['fullName'] == name then
+            return tournament['index']
+        end
+    end
+    return nil
+end
+
+--- Uses default values for tournaments which a team didn't get any points in.
+-- @tparam tournament tournament
+-- @treturn string tournamentPointsString
+function getTournamentPointsString(tournament)
+    local tournamentFinished = tournament['finished']
+    if tournamentFinished == true then
+        tempString = '-'
     else
         tempString = ''
     end
@@ -481,7 +567,6 @@ function getTournamentPointsString(tournament, currentDate)
 end
 
 --- gets the deduction points of a team for a single tournament.
--- gets the deduction points of a team for a single tournament provided the tournament's index.
 -- @tparam teamData team
 -- @tparam number tournamentIndex the index of the tournament for which the deductions are returned
 -- @treturn number points the number of deduction points for the team in the tournament
@@ -495,26 +580,7 @@ function getTeamDeductionPointsByIndex(team, tournamentIndex)
     return points
 end
 
---- Performs a SMW Ask Query.
--- Performs a SMW Ask Query to get the points of a given team for a given tournament.
--- @tparam teamData team
--- @tparam tournament tournament
--- @treturn table queryResult a table returned by mw.smw.ask(), returns an empty table if no results found
-function querySingleDataCellFromSMW(team, tournament)
-    local tournamentIndex = tournament['index']
-    local teamName = getTournamentTeamName(team, tournamentIndex)
-    local tournamentName = tournament['fullName']
-    local queryString = '[[Has placement::+]] [[Has team page::' .. teamName .. ']] [[Has tournament name::' .. tournamentName .. ']]|?Has prizepoints|?Has tournament name|?Has placement|?Has date#ISO|limit=1'
-    local queryResult = mw.smw.ask(queryString)
-    if queryResult then
-        return queryResult
-    else
-        return {}
-    end
-end
-
 --- Fetches the team name for a specific tournament.
--- Fetches the team name for a given tournament using the index of the tournament.
 -- @tparam teamData team
 -- @tparam number index
 -- @return string - the resolved name of the team
@@ -531,27 +597,7 @@ function getTournamentTeamName(team, index)
     return teamName
 end
 
---- Performs a SMW Ask Query to get a tournament date using its name
--- @tparam string tournamentName the name of the tournament
--- @treturn string date a string representing the ending date of the tournament in ISO Format yyyy-mm-dd if found, otherwise returns nil
-function getTournamentEndDate(tournamentName)
-    local query = mw.smw.ask('[[Category:Tournaments]] [[Has date::+]] [[Has name::'..tournamentName..']]|?Has date#ISO|?Has end date#ISO')
-    if not query then
-        return nil
-    end
-    local date
-    if query[1]['Has end date'] then
-        date = query[1]['Has end date']
-    elseif query[1]['Has date'] then
-        date = query[1]['Has date']
-    else
-        date = nil
-    end
-    return date
-end
-
---- Creates an html table.
--- Creates an html table wrapped in a div element and fills it with the data provided in the template arguments.
+--- Creates the points table in html code.
 -- @tparam frame frame
 -- @tparam table args the main template arguments
 -- @tparam {{cellTeamData,...},...} data the data table that contains the teams' data
@@ -559,9 +605,8 @@ end
 -- @tparam tournament deductions a table that contains the deduction columns' data
 -- @return node tableWrapper the node of the parent div which wraps the table node, this node contains all the html that renders the table
 function makePointsTable(frame, args, data, tournaments, deductions)
-    local tableWidth = args['width']
     local columnCount = countEntries(tournaments) + countEntries(deductions)
-    local tableWrapper = createTableWrapper(tableWidth, columnCount)
+    local tableWrapper = createTableWrapper(columnCount)
     local htmlTable = createTableTag(tableWrapper)
 
     local customTableHeader = args['custom-header']
@@ -574,13 +619,14 @@ function makePointsTable(frame, args, data, tournaments, deductions)
     return secondaryWrapper.parent
 end
 
---- Creates a div.
--- Creates a div which wraps the table node to make it mobile friendly.
--- @tparam number tableWidth - the width of the table node
+--- Creates the wrapper div which wraps the table node for mobile responsiveness.
 -- @tparam number columnCount - the number of tournament columns
 -- @return node div - the secondary wrapper which wraps the table and is wrapped inside the primary wrapper, the primary wrapper is the wrapper which should be returned by the main fucntion
-function createTableWrapper(tableWidth, columnCount)
-    if not tableWidth then
+function createTableWrapper(columnCount)
+    local tableWidth
+    if gConfig['width'] then
+        tableWidth = gConfig['width']
+    else
         tableWidth = 312 + 50 * (columnCount) + gConfig['headerHeight']
     end
     local tableWrapper = mw.html.create('div')
@@ -595,8 +641,7 @@ function createTableWrapper(tableWidth, columnCount)
     return secondaryWrapper
 end
 
---- Creates a table node.
--- Creates the main table node.
+--- Creates the main table node.
 -- @tparam node tableWrapper - the node which wraps this table node
 -- @return node htmlTable
 function createTableTag(tableWrapper)
@@ -608,7 +653,7 @@ function createTableTag(tableWrapper)
     return htmlTable
 end
 
---- Adds the table header to the html table.
+--- Adds the table header to the points table.
 -- @tparam frame frame
 -- @tparam node htmlTable
 -- @tparam string customHeader
@@ -625,8 +670,7 @@ function addTableHeader(frame, htmlTable, customHeader, tournaments, deductions)
     htmlTable:node(tableHeader)
 end
 
---- Creates the table body.
--- Creates the table body and attaches it to the provided htmlTable node.
+--- Creates the table body and attaches it to the points table.
 -- @tparam frame frame
 -- @tparam node htmlTable
 -- @tparam table data
@@ -662,7 +706,6 @@ function renderTableBody(frame, htmlTable, data)
 end
 
 --- Styles the background, foreground and font-weight of an element.
--- Adds css styling for background-color, color and font-weight of an mw.html element.
 -- @tparam node item mw.html object
 -- @tparam cssData args css styling arguments
 -- @tparam number c the column number
@@ -694,7 +737,6 @@ function styleItem(item, args, c)
 end
 
 --- Renders an html row from row arguments.
--- Renders an html tr element from arguments table.
 -- @tparam frame frame
 -- @tparam cellTeamData rowArgs
 -- @return mw.html tr - table row represented by an mw.html object
@@ -709,6 +751,10 @@ function renderRow(frame, rowArgs)
 
     makeTotalPointsCell(row, rowArgs)
 
+    if gConfig['minified'] == true then
+        row:done()
+        return row
+    end
     -- the rest of the cells
     local c = 4
     for _, cell in pairs(rowArgs) do
@@ -733,7 +779,6 @@ function renderRow(frame, rowArgs)
 end
 
 --- Creates the cell which shows the position of the team.
--- Creates the cell which shows the position of the team and adds it to the given row.
 -- @tparam node row the mw.html row node to add the cell to
 -- @tparam {cellTeamData,...} rowArgs
 -- @return nil
@@ -752,7 +797,6 @@ function makePositionCell(row, rowArgs)
 end
 
 --- Creates the cell which shows the name of the team.
--- Creates the cell which shows the name of the team and adds it to the given row.
 -- @tparam frame frame
 -- @tparam node row the mw.html row node to add the cell to
 -- @tparam {cellTeamData,...} rowArgs
@@ -787,7 +831,6 @@ function makeTeamCell(frame, row, rowArgs)
 end
 
 --- Creates the cell which shows the total number of points of the team.
--- Creates the cell which shows the total number of points of the team and adds it to the given row.
 -- @tparam node row the mw.html row node to add the cell to
 -- @tparam {cellTeamData,...} rowArgs
 -- @return nil
@@ -804,7 +847,6 @@ function makeTotalPointsCell(row, rowArgs)
 end
 
 --- Creates the cell which shows the number of points of the team for a single tournament.
--- Creates the cell which shows the number of points of the team for a single tournament and adds it to the given row.
 -- @tparam node row the mw.html row node to add the cell to
 -- @tparam {cellTeamData,...} rowArgs
 -- @tparam cellTeamData cell
@@ -817,7 +859,6 @@ function makeTournamentPointsCell(row, rowArgs, cell, c)
 end
 
 --- Creates the cell which shows the number of points deducted from an team for a single column.
--- Creates the cell which shows the number of points deducted from an team for a single column and adds it to the given row.
 -- @tparam frame frame
 -- @tparam node row the mw.html row node to add the cell to
 -- @tparam {cellTeamData,...} rowArgs
@@ -882,30 +923,37 @@ end
 
 return p
 
---- a table team contains some teamData.
--- @tfield string name the name of the team - case sensitive
--- @tfield string aliasX the alias of the team for tournament X - case sensitive
--- @tfield number deductionX the deduction points for this team in tournament X
--- @tfield string displayTemplate the name of the template to use when rendering the team cell
--- @table teamData
-
 --- a tournament table that represents a single tournament.
 -- @tfield number index the index of the tournament as provided in main template arguments
 -- @tfield string fullName the full name of the tournament as mentioned in the infobox
 -- @tfield string shortName the tourname name which shows up in the table header
 -- @tfield string link the link to the tournament page
 -- @tfield string type the type of the tournament - 'tournament' or 'deduction'
--- @tfield string endDate the end date of the tournament in the format yyyy-mm-dd
+-- @tfield boolean finished
 -- @table tournament
+
+--- a table team contains a single team's information.
+-- @tfield string name the name of the team - case sensitive
+-- @tfield string aliasX the alias of the team for tournament X - case sensitive
+-- @tfield number deductionX the deduction points for this team in tournament X
+-- @tfield string displayTemplate the name of the template to use when rendering the team cell
+-- @table teamData
+
+--- a table that contains a team's result for a single tournament
+-- @tfield string tournamentName
+-- @tfield string teamName the name of the team during this tournament - accounts for aliases
+-- @tfield number prizepoints
+-- @tfield string placement
+-- @table prettyResult
 
 --- a table that contains the team data for a single tournament.
 -- @tfield table tournament - a reference to the table (the tournament/deduction) which is represented by this data entry
 -- @tfield table team - a reference to an team
 -- @tfield number points - the points of the team in this entry
 -- @tfield table total - a table containing the total points of this team
--- @table tournamentTeamQueryData
+-- @table teamPoints
 
---- same as @{tournamentTeamQueryData} in addition to @{cssData}.
+--- same as @{teamPoints} in addition to @{cssData}.
 -- @tfield table tournament - a reference to the table (the tournament/deduction) which is represented by this data entry
 -- @tfield table team - a reference to an team
 -- @tfield number points - the points of the team in this entry
