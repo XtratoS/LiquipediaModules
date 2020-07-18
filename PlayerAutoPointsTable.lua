@@ -1,7 +1,7 @@
----- This Module creates a table that shows the points of player/players in a point system tournament (using subobjects defined in prizepool templates), this was mainly created for the new Circuit System starting RLCS Season X.
+---- This Module creates a table that shows the points of players in a point system tournament (using subobjects defined in prizepool templates), this was mainly created for the Astronauts Star Circuit.
 ---- Revision 1.0
 ----
----- Team Names are case sensitive
+---- Player Names are case sensitive
 ----
 ---- There are 2 different naming conventions used; for arguments provided by the Module invoker, variable with names of multiple words are separated by a dash, for instance 'header-height'; 
 ---- Everything else within this module uses camelCase.
@@ -577,20 +577,6 @@ function getTournamentPointsString(tournament)
     return tempString
 end
 
---- gets the deduction points of a player for a single tournament.
--- @tparam playerData player
--- @tparam number tournamentIndex the index of the tournament for which the deductions are returned
--- @treturn number points the number of deduction points for the player in the tournament
-function getTeamDeductionPointsByIndex(player, tournamentIndex)
-    local points
-    if player['deduction'..tournamentIndex] then
-        points = player['deduction'..tournamentIndex]
-    else
-        points = 0
-    end
-    return points
-end
-
 --- Creates the points table in html code.
 -- @tparam frame frame
 -- @tparam table args the main template arguments
@@ -749,7 +735,7 @@ function renderRow(frame, rowArgs)
 
     makePositionCell(row, rowArgs)
 
-    makeTeamCell(frame, row, rowArgs)
+    makePlayerCell(frame, row, rowArgs)
 
     makeTotalPointsCell(row, rowArgs)
 
@@ -803,7 +789,7 @@ end
 -- @tparam node row the mw.html row node to add the cell to
 -- @tparam {cellPlayerData,...} rowArgs
 -- @return nil
-function makeTeamCell(frame, row, rowArgs)
+function makePlayerCell(frame, row, rowArgs)
     local td = row:tag('td')
     local expandedPlayer
     local strike
