@@ -73,16 +73,14 @@ function setUnprovidedArgsToDefault(args)
         args['header-height'] = 100
     end
     if args['width'] then
-        gConfig['width'] = args['width']
+        args['width'] = args['width']
     else
         if args['minified'] == 'true' then
-            gConfig['width'] = 45 + 225 + 75
+            args['width'] = 45 + 225 + 75 + 1
         end
     end
-    if args['concept'] then
-        gConfig['concept'] = args['concept']
-    else
-        gConfig['concept'] = 'Prizepoint_subobjects'
+    if not args['concept'] then
+        args['concept'] = 'Prizepoint_subobjects'
     end
 end
 
@@ -93,7 +91,8 @@ function setGlobalConfig(args)
     for _, configProp in pairs({
         'started',
         'bg>pbg',
-        'minified'
+        'minified',
+        'unique'
     }) do
         if args[configProp] == 'true' then
             gConfig[configProp] = true
@@ -104,6 +103,14 @@ function setGlobalConfig(args)
     if args['limit'] then
         gConfig['limit'] = tonumber(args['limit'])
     end
+    if args['cutafter'] then
+        gConfig['cutafter'] = tonumber(args['cutafter'])
+    else
+        gConfig['cutafter'] = 16
+    end
+    gConfig['headerHeight'] = args['header-height']
+    gConfig['width'] = args['width']
+    gConfig['concept'] = args['concept']
     gConfig['headerHeight'] = args['header-height']
 end
 
@@ -321,16 +328,18 @@ end
 function makeDefaultTableHeaders(frame, tournaments, deductions)
     local headerHeight = gConfig['headerHeight']
     local row = mw.html.create('tr')
-    local divWidth = math.ceil(headerHeight * SIN_45_DEG * 2) + 1
-    local translateY = (headerHeight - 50) / 2
+    local divWidth = math.ceil(headerHeight * SIN_45_DEG * 2) + 3
+    local translateY = (headerHeight - 50) / 2 + 1
     local headerStartTemplate
     if gConfig['minified'] == true then
         headerStartTemplate = 'RankingsTable/MinifiedHeaderStart'
+        headerHeight = 33
     else
         headerStartTemplate = 'RankingsTable/HeaderStart'
     end
+    row:cssText('background-color: #eaecf0; border-top: hidden; height:'..headerHeight..'px;')
     local expandedHeaderStart = protectedExpansion(frame, headerStartTemplate, {
-        translateY = translateY - 26,
+        translateY = translateY - 26.5,
         divWidth = divWidth,
         height = headerHeight
     })
@@ -398,7 +407,7 @@ function appendDivToLastThreeHeaderCells(headerArgs, columnIndex, columnCount, d
         else
             headerArgs['morecss'] = 'height:30px; margin-bottom:5px;'
         end
-        headerArgs['before'] = '<div class="table-header-div" style="background-color:#eaecf0;height:5px; margin-bottom:0px;border-bottom: 0px;"></div>'
+        headerArgs['before'] = '<div class="table-header-div" style="background-color:#eaecf0; width:'..divWidth..'px; height:5px; margin-bottom:0px;border-bottom: 0px;"></div>'
     end
     return headerArgs
 end
@@ -546,7 +555,7 @@ end
 -- @return ?|nil|number tournamentIndex
 function getIndexByName(tournaments, tournamentName)
     for _, tournament in pairs(tournaments) do
-        if tournament['fullName'] == name then
+        if tournament['fullName'] == tournamentName then
             return tournament['index']
         end
     end
@@ -648,8 +657,12 @@ function createTableTag(tableWrapper)
     local htmlTable = tableWrapper:tag('table')
     htmlTable
         :addClass('wikitable')
+        :addClass('prizepooltable')
+        :addClass('collapsed')
+        :attr('data-cutafter', gConfig['cutafter'])
         :css('text-align', 'center')
         :css('margin', '0px')
+        :css('width', '0')
     return htmlTable
 end
 
@@ -677,16 +690,23 @@ end
 -- @return nil
 function renderTableBody(frame, htmlTable, data)
     local apparentPosition = 1
-    local previousPoints = -1
+    local actualPosition = 1
+    local previousPoints
+    if data[1] then
+        previousPoints = data[1]['total']['totalPoints']
+    end
     local rowCounter = 0
     local currentPoints
     for _, dataRow in pairs(data) do
         currentPoints = dataRow['total']['totalPoints']
-        if previousPoints then
-            if currentPoints > previousPoints then
-                apparentPosition = apparentPosition
+        if currentPoints < previousPoints then
+            apparentPosition = actualPosition
+        else
+            if gConfig['unique'] == true then
+                apparentPosition = actualPosition
             end
         end
+        previousPoints = currentPoints
 
         dataRow['position'] = {
             position = apparentPosition
@@ -694,7 +714,6 @@ function renderTableBody(frame, htmlTable, data)
 
         local tableRow = renderRow(frame, dataRow)
         htmlTable:node(tableRow)
-        apparentPosition = apparentPosition + 1
         rowCounter = rowCounter + 1
         if gConfig['limit'] then
             local limit = gConfig['limit']
@@ -702,6 +721,7 @@ function renderTableBody(frame, htmlTable, data)
                 return
             end
         end
+        actualPosition = actualPosition + 1
     end
 end
 
