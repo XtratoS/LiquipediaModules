@@ -39,8 +39,8 @@
 
 <h2>Modules</h2>
 <ul class="nowrap">
-  <li><strong>AutoPointsTable</strong></li>
-  <li><a href="../modules/PlayerAutoPointsTable.html">PlayerAutoPointsTable</a></li>
+  <li><a href="../modules/AutoPointsTable.html">AutoPointsTable</a></li>
+  <li><strong>PlayerAutoPointsTable</strong></li>
   <li><a href="../modules/PointsTable.html">PointsTable</a></li>
   <li><a href="../modules/StatsTable.html">StatsTable</a></li>
   <li><a href="../modules/SubArgumentFetcher.html">SubArgumentFetcher</a></li>
@@ -50,11 +50,11 @@
 
 <div id="content">
 
-<h1>Module <code>AutoPointsTable</code></h1>
-<p>This Module creates a table that shows the points of teams in a point system tournament (using subobjects defined in prizepool templates), this was mainly created for the new Circuit System starting RLCS Season X.</p>
+<h1>Module <code>PlayerAutoPointsTable</code></h1>
+<p>This Module creates a table that shows the points of players in a point system tournament (using subobjects defined in prizepool templates), this was mainly created for the Astronauts Star Circuit.</p>
 <p>
  Revision 1.0
-<p> Team Names are case sensitive
+<p> Player Names are case sensitive
 <p> There are 2 different naming conventions used; for arguments provided by the Module invoker, variable with names of multiple words are separated by a dash, for instance 'header-height';
  Everything else within this module uses camelCase.
 <p> The HTML Library was used to create the html code produced by this Module: https://www.mediawiki.org/wiki/Extension:Scribunto/Lua_reference_manual#HTML_library</p>
@@ -87,19 +87,19 @@
 	<td class="summary">Fetches the tournament arguments provided.</td>
 	</tr>
 	<tr>
-	<td class="name"><a href="#fetchTeamData">fetchTeamData (args, numberOfTournaments)</a></td>
-	<td class="summary">Fetches the teams' data.</td>
+	<td class="name"><a href="#fetchPlayerData">fetchPlayerData (args, numberOfTournaments)</a></td>
+	<td class="summary">Fetches the players' data.</td>
 	</tr>
 	<tr>
 	<td class="name"><a href="#expandSubTemplates">expandSubTemplates (args)</a></td>
 	<td class="summary">Expands the sub-templates' args.</td>
 	</tr>
 	<tr>
-	<td class="name"><a href="#attachStylingDataToMainData">attachStylingDataToMainData (args, data, teams)</a></td>
+	<td class="name"><a href="#attachStylingDataToMainData">attachStylingDataToMainData (args, data, players)</a></td>
 	<td class="summary">Attaches styling data.</td>
 	</tr>
 	<tr>
-	<td class="name"><a href="#attachPositionBackgroundColorsToCells">attachPositionBackgroundColorsToCells (args, data, teams)</a></td>
+	<td class="name"><a href="#attachPositionBackgroundColorsToCells">attachPositionBackgroundColorsToCells (args, data, players)</a></td>
 	<td class="summary">Attaches the position background colors to the main data table.</td>
 	</tr>
 	<tr>
@@ -127,16 +127,16 @@
 	<td class="summary">Modifies the header arguments for a deduction header cell.</td>
 	</tr>
 	<tr>
-	<td class="name"><a href="#getTeamPointsData">getTeamPointsData (team, tournaments, deductions)</a></td>
-	<td class="summary">Fetches the points of a team for the given tournaments.</td>
+	<td class="name"><a href="#getPlayerPointsData">getPlayerPointsData (player, tournaments, deductions)</a></td>
+	<td class="summary">Fetches the points of a player for the given tournaments.</td>
 	</tr>
 	<tr>
-	<td class="name"><a href="#queryTeamResultsFromSMW">queryTeamResultsFromSMW (team, tournaments)</a></td>
-	<td class="summary">Performs the required SMW Queries to get the team prize points for all tournaments provided.</td>
+	<td class="name"><a href="#queryPlayerResultsFromSMW">queryPlayerResultsFromSMW (player, tournaments)</a></td>
+	<td class="summary">Performs the required SMW Queries to get the player prize points for all tournaments provided.</td>
 	</tr>
 	<tr>
-	<td class="name"><a href="#teamNameFromTeamPage">teamNameFromTeamPage (teamPage)</a></td>
-	<td class="summary">Fetches the team name from the team page string.</td>
+	<td class="name"><a href="#linkToName">linkToName (playerPage)</a></td>
+	<td class="summary">Fetches the player name from the player page string.</td>
 	</tr>
 	<tr>
 	<td class="name"><a href="#getIndexByName">getIndexByName (tournaments, tournamentName)</a></td>
@@ -144,15 +144,7 @@
 	</tr>
 	<tr>
 	<td class="name"><a href="#getTournamentPointsString">getTournamentPointsString (tournament)</a></td>
-	<td class="summary">Uses default values for tournaments which a team didn't get any points in.</td>
-	</tr>
-	<tr>
-	<td class="name"><a href="#getTeamDeductionPointsByIndex">getTeamDeductionPointsByIndex (team, tournamentIndex)</a></td>
-	<td class="summary">gets the deduction points of a team for a single tournament.</td>
-	</tr>
-	<tr>
-	<td class="name"><a href="#getTournamentTeamName">getTournamentTeamName (team, index)</a></td>
-	<td class="summary">Fetches the team name for a specific tournament.</td>
+	<td class="summary">Uses default values for tournaments which a player didn't get any points in.</td>
 	</tr>
 	<tr>
 	<td class="name"><a href="#makePointsTable">makePointsTable (frame, args, data, tournaments, deductions)</a></td>
@@ -184,23 +176,23 @@
 	</tr>
 	<tr>
 	<td class="name"><a href="#makePositionCell">makePositionCell (row, rowArgs)</a></td>
-	<td class="summary">Creates the cell which shows the position of the team.</td>
+	<td class="summary">Creates the cell which shows the position of the player.</td>
 	</tr>
 	<tr>
-	<td class="name"><a href="#makeTeamCell">makeTeamCell (frame, row, rowArgs)</a></td>
-	<td class="summary">Creates the cell which shows the name of the team.</td>
+	<td class="name"><a href="#makePlayerCell">makePlayerCell (frame, row, rowArgs)</a></td>
+	<td class="summary">Creates the cell which shows the flag/name of the player.</td>
 	</tr>
 	<tr>
 	<td class="name"><a href="#makeTotalPointsCell">makeTotalPointsCell (row, rowArgs)</a></td>
-	<td class="summary">Creates the cell which shows the total number of points of the team.</td>
+	<td class="summary">Creates the cell which shows the total number of points of the player.</td>
 	</tr>
 	<tr>
 	<td class="name"><a href="#makeTournamentPointsCell">makeTournamentPointsCell (row, rowArgs, cell, c)</a></td>
-	<td class="summary">Creates the cell which shows the number of points of the team for a single tournament.</td>
+	<td class="summary">Creates the cell which shows the number of points of the player for a single tournament.</td>
 	</tr>
 	<tr>
 	<td class="name"><a href="#makeDeductionPointsCell">makeDeductionPointsCell (frame, row, rowArgs, cell, c)</a></td>
-	<td class="summary">Creates the cell which shows the number of points deducted from an team for a single column.</td>
+	<td class="summary">Creates the cell which shows the number of points deducted from a player for a single column.</td>
 	</tr>
 	<tr>
 	<td class="name"><a href="#countEntries">countEntries (t)</a></td>
@@ -222,20 +214,20 @@
 	<td class="summary">a tournament table that represents a single tournament.</td>
 	</tr>
 	<tr>
-	<td class="name"><a href="#teamData">teamData</a></td>
-	<td class="summary">a table team contains a single team's information.</td>
+	<td class="name"><a href="#playerData">playerData</a></td>
+	<td class="summary">a player table contains a single player's information.</td>
 	</tr>
 	<tr>
 	<td class="name"><a href="#prettyResult">prettyResult</a></td>
-	<td class="summary">a table that contains a team's result for a single tournament</td>
+	<td class="summary">a table that contains a player's result for a single tournament</td>
 	</tr>
 	<tr>
-	<td class="name"><a href="#teamPoints">teamPoints</a></td>
-	<td class="summary">a table that contains the team data for a single tournament.</td>
+	<td class="name"><a href="#playerPoints">playerPoints</a></td>
+	<td class="summary">a table that contains the player data for a single tournament.</td>
 	</tr>
 	<tr>
-	<td class="name"><a href="#cellTeamData">cellTeamData</a></td>
-	<td class="summary">same as <a href="../modules/AutoPointsTable.html#teamPoints">teamPoints</a> in addition to <a href="../modules/AutoPointsTable.html#cssData">cssData</a>.</td>
+	<td class="name"><a href="#cellPlayerData">cellPlayerData</a></td>
+	<td class="summary">same as <a href="../modules/PlayerAutoPointsTable.html#playerPoints">playerPoints</a> in addition to <a href="../modules/PlayerAutoPointsTable.html#cssData">cssData</a>.</td>
 	</tr>
 	<tr>
 	<td class="name"><a href="#cssData">cssData</a></td>
@@ -361,17 +353,17 @@
     </dt>
     <dd>
     Custom sorting function.
- Sorts the teams by their total points then names in-case of a tie.
+ Sorts the players by their total points then names in-case of a tie.
 
 
     <h3>Parameters:</h3>
     <ul>
         <li><span class="parameter">a</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#teamPoints">teamPoints</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#playerPoints">playerPoints</a></span>
 
         </li>
         <li><span class="parameter">b</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#teamPoints">teamPoints</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#playerPoints">playerPoints</a></span>
 
         </li>
     </ul>
@@ -402,10 +394,10 @@
     <h3>Returns:</h3>
     <ol>
         <li>
-           <span class="types"><a class="type" href="../modules/AutoPointsTable.html#tournament">{tournament,...}</a></span>
+           <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#tournament">{tournament,...}</a></span>
         a table of tournaments</li>
         <li>
-           <span class="types"><a class="type" href="../modules/AutoPointsTable.html#tournament">{tournament,...}</a></span>
+           <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#tournament">{tournament,...}</a></span>
         a table of deductions</li>
     </ol>
 
@@ -414,12 +406,12 @@
 
 </dd>
     <dt>
-    <a name = "fetchTeamData"></a>
-    <strong>fetchTeamData (args, numberOfTournaments)</strong>
+    <a name = "fetchPlayerData"></a>
+    <strong>fetchPlayerData (args, numberOfTournaments)</strong>
     </dt>
     <dd>
-    Fetches the teams' data.
- Fetches the table of teams provided by the main arguments to the template that invokes this module - case sensitive.
+    Fetches the players' data.
+ Fetches the table of players provided by the main arguments to the template that invokes this module - case sensitive.
 
 
     <h3>Parameters:</h3>
@@ -438,7 +430,7 @@
     <ol>
 
            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
-        teams a table that contains data about teams; their name, aliases and point deductions in any of the tournaments
+        players a table that contains data about players; their name, aliases and point deductions in any of the tournaments
     </ol>
 
 
@@ -475,12 +467,12 @@
 </dd>
     <dt>
     <a name = "attachStylingDataToMainData"></a>
-    <strong>attachStylingDataToMainData (args, data, teams)</strong>
+    <strong>attachStylingDataToMainData (args, data, players)</strong>
     </dt>
     <dd>
     Attaches styling data.
  Attaches the styling data to the main data,
- uses the teams' names to get the corresponding styling data from the main arguments if they exist,
+ uses the players' names to get the corresponding styling data from the main arguments if they exist,
  then attaches this data to the given data table.
 
 
@@ -491,12 +483,12 @@
          the main template arguments
         </li>
         <li><span class="parameter">data</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#teamPoints">teamPoints</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#playerPoints">playerPoints</a></span>
          the data table to which the css data is to be attached
         </li>
-        <li><span class="parameter">teams</span>
+        <li><span class="parameter">players</span>
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
-         the table that contains the teams data
+         the table that contains the players data
         </li>
     </ul>
 
@@ -512,7 +504,7 @@
 </dd>
     <dt>
     <a name = "attachPositionBackgroundColorsToCells"></a>
-    <strong>attachPositionBackgroundColorsToCells (args, data, teams)</strong>
+    <strong>attachPositionBackgroundColorsToCells (args, data, players)</strong>
     </dt>
     <dd>
     Attaches the position background colors to the main data table.
@@ -526,10 +518,10 @@
          the main template arguments
         </li>
         <li><span class="parameter">data</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#cellTeamData">{{cellTeamData,...},...}</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#cellPlayerData">{{cellPlayerData,...},...}</a></span>
 
         </li>
-        <li><span class="parameter">teams</span>
+        <li><span class="parameter">players</span>
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
 
         </li>
@@ -593,11 +585,11 @@
 
         </li>
         <li><span class="parameter">tournaments</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#tournament">{tournament,...}</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#tournament">{tournament,...}</a></span>
 
         </li>
         <li><span class="parameter">deductions</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#tournament">{tournament,...}</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#tournament">{tournament,...}</a></span>
 
         </li>
     </ul>
@@ -625,7 +617,7 @@
     <h3>Parameters:</h3>
     <ul>
         <li><span class="parameter">tournament</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#tournament">tournament</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#tournament">tournament</a></span>
 
         </li>
     </ul>
@@ -743,25 +735,25 @@
 
 </dd>
     <dt>
-    <a name = "getTeamPointsData"></a>
-    <strong>getTeamPointsData (team, tournaments, deductions)</strong>
+    <a name = "getPlayerPointsData"></a>
+    <strong>getPlayerPointsData (player, tournaments, deductions)</strong>
     </dt>
     <dd>
-    Fetches the points of a team for the given tournaments.
+    Fetches the points of a player for the given tournaments.
 
 
     <h3>Parameters:</h3>
     <ul>
-        <li><span class="parameter">team</span>
+        <li><span class="parameter">player</span>
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
 
         </li>
         <li><span class="parameter">tournaments</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#tournament">{tournament,...}</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#tournament">{tournament,...}</a></span>
 
         </li>
         <li><span class="parameter">deductions</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#tournament">{tournament,...}</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#tournament">{tournament,...}</a></span>
 
         </li>
     </ul>
@@ -769,7 +761,7 @@
     <h3>Returns:</h3>
     <ol>
 
-        <a href="../modules/AutoPointsTable.html#teamPoints">teamPoints</a>
+        <a href="../modules/PlayerAutoPointsTable.html#playerPoints">playerPoints</a>
     </ol>
 
 
@@ -777,21 +769,21 @@
 
 </dd>
     <dt>
-    <a name = "queryTeamResultsFromSMW"></a>
-    <strong>queryTeamResultsFromSMW (team, tournaments)</strong>
+    <a name = "queryPlayerResultsFromSMW"></a>
+    <strong>queryPlayerResultsFromSMW (player, tournaments)</strong>
     </dt>
     <dd>
-    Performs the required SMW Queries to get the team prize points for all tournaments provided.
+    Performs the required SMW Queries to get the player prize points for all tournaments provided.
 
 
     <h3>Parameters:</h3>
     <ul>
-        <li><span class="parameter">team</span>
-            <span class="types"><span class="type">team</span></span>
+        <li><span class="parameter">player</span>
+            <span class="types"><span class="type">player</span></span>
 
         </li>
         <li><span class="parameter">tournaments</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#tournament">{tournament,...}</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#tournament">{tournament,...}</a></span>
 
         </li>
     </ul>
@@ -799,7 +791,7 @@
     <h3>Returns:</h3>
     <ol>
 
-           <span class="types"><span class="type">nil</span> or <a class="type" href="../modules/AutoPointsTable.html#prettyResult">{prettyResult,...}</a></span>
+           <span class="types"><span class="type">nil</span> or <a class="type" href="../modules/PlayerAutoPointsTable.html#prettyResult">{prettyResult,...}</a></span>
         prettyResults
     </ol>
 
@@ -808,16 +800,16 @@
 
 </dd>
     <dt>
-    <a name = "teamNameFromTeamPage"></a>
-    <strong>teamNameFromTeamPage (teamPage)</strong>
+    <a name = "linkToName"></a>
+    <strong>linkToName (playerPage)</strong>
     </dt>
     <dd>
-    Fetches the team name from the team page string.
+    Fetches the player name from the player page string.
 
 
     <h3>Parameters:</h3>
     <ul>
-        <li><span class="parameter">teamPage</span>
+        <li><span class="parameter">playerPage</span>
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
 
         </li>
@@ -826,7 +818,7 @@
     <h3>Returns:</h3>
     <ol>
 
-        string teamName
+        string playerName
     </ol>
 
 
@@ -844,7 +836,7 @@
     <h3>Parameters:</h3>
     <ul>
         <li><span class="parameter">tournaments</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#tournament">{tournament,...}</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#tournament">{tournament,...}</a></span>
 
         </li>
         <li><span class="parameter">tournamentName</span>
@@ -868,13 +860,13 @@
     <strong>getTournamentPointsString (tournament)</strong>
     </dt>
     <dd>
-    Uses default values for tournaments which a team didn't get any points in.
+    Uses default values for tournaments which a player didn't get any points in.
 
 
     <h3>Parameters:</h3>
     <ul>
         <li><span class="parameter">tournament</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#tournament">tournament</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#tournament">tournament</a></span>
 
         </li>
     </ul>
@@ -884,67 +876,6 @@
 
            <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
         tournamentPointsString
-    </ol>
-
-
-
-
-</dd>
-    <dt>
-    <a name = "getTeamDeductionPointsByIndex"></a>
-    <strong>getTeamDeductionPointsByIndex (team, tournamentIndex)</strong>
-    </dt>
-    <dd>
-    gets the deduction points of a team for a single tournament.
-
-
-    <h3>Parameters:</h3>
-    <ul>
-        <li><span class="parameter">team</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#teamData">teamData</a></span>
-
-        </li>
-        <li><span class="parameter">tournamentIndex</span>
-            <span class="types"><span class="type">number</span></span>
-         the index of the tournament for which the deductions are returned
-        </li>
-    </ul>
-
-    <h3>Returns:</h3>
-    <ol>
-
-           <span class="types"><span class="type">number</span></span>
-        points the number of deduction points for the team in the tournament
-    </ol>
-
-
-
-
-</dd>
-    <dt>
-    <a name = "getTournamentTeamName"></a>
-    <strong>getTournamentTeamName (team, index)</strong>
-    </dt>
-    <dd>
-    Fetches the team name for a specific tournament.
-
-
-    <h3>Parameters:</h3>
-    <ul>
-        <li><span class="parameter">team</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#teamData">teamData</a></span>
-
-        </li>
-        <li><span class="parameter">index</span>
-            <span class="types"><span class="type">number</span></span>
-
-        </li>
-    </ul>
-
-    <h3>Returns:</h3>
-    <ol>
-
-        string - the resolved name of the team
     </ol>
 
 
@@ -970,15 +901,15 @@
          the main template arguments
         </li>
         <li><span class="parameter">data</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#cellTeamData">{{cellTeamData,...},...}</a></span>
-         the data table that contains the teams' data
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#cellPlayerData">{{cellPlayerData,...},...}</a></span>
+         the data table that contains the player's data
         </li>
         <li><span class="parameter">tournaments</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#tournament">tournament</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#tournament">tournament</a></span>
          a table that contains the tournaments data
         </li>
         <li><span class="parameter">deductions</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#tournament">tournament</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#tournament">tournament</a></span>
          a table that contains the deduction columns' data
         </li>
     </ul>
@@ -1068,7 +999,7 @@
 
         </li>
         <li><span class="parameter">tournaments</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#tournament">{tournament,...}</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#tournament">{tournament,...}</a></span>
 
         </li>
         <li><span class="parameter">deductions</span>
@@ -1136,7 +1067,7 @@
          mw.html object
         </li>
         <li><span class="parameter">args</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#cssData">cssData</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#cssData">cssData</a></span>
          css styling arguments
         </li>
         <li><span class="parameter">c</span>
@@ -1170,7 +1101,7 @@
 
         </li>
         <li><span class="parameter">rowArgs</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#cellTeamData">cellTeamData</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#cellPlayerData">cellPlayerData</a></span>
 
         </li>
     </ul>
@@ -1190,7 +1121,7 @@
     <strong>makePositionCell (row, rowArgs)</strong>
     </dt>
     <dd>
-    Creates the cell which shows the position of the team.
+    Creates the cell which shows the position of the player.
 
 
     <h3>Parameters:</h3>
@@ -1200,7 +1131,7 @@
          the mw.html row node to add the cell to
         </li>
         <li><span class="parameter">rowArgs</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#cellTeamData">{cellTeamData,...}</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#cellPlayerData">{cellPlayerData,...}</a></span>
 
         </li>
     </ul>
@@ -1216,11 +1147,11 @@
 
 </dd>
     <dt>
-    <a name = "makeTeamCell"></a>
-    <strong>makeTeamCell (frame, row, rowArgs)</strong>
+    <a name = "makePlayerCell"></a>
+    <strong>makePlayerCell (frame, row, rowArgs)</strong>
     </dt>
     <dd>
-    Creates the cell which shows the name of the team.
+    Creates the cell which shows the flag/name of the player.
 
 
     <h3>Parameters:</h3>
@@ -1234,7 +1165,7 @@
          the mw.html row node to add the cell to
         </li>
         <li><span class="parameter">rowArgs</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#cellTeamData">{cellTeamData,...}</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#cellPlayerData">{cellPlayerData,...}</a></span>
 
         </li>
     </ul>
@@ -1254,7 +1185,7 @@
     <strong>makeTotalPointsCell (row, rowArgs)</strong>
     </dt>
     <dd>
-    Creates the cell which shows the total number of points of the team.
+    Creates the cell which shows the total number of points of the player.
 
 
     <h3>Parameters:</h3>
@@ -1264,7 +1195,7 @@
          the mw.html row node to add the cell to
         </li>
         <li><span class="parameter">rowArgs</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#cellTeamData">{cellTeamData,...}</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#cellPlayerData">{cellPlayerData,...}</a></span>
 
         </li>
     </ul>
@@ -1284,7 +1215,7 @@
     <strong>makeTournamentPointsCell (row, rowArgs, cell, c)</strong>
     </dt>
     <dd>
-    Creates the cell which shows the number of points of the team for a single tournament.
+    Creates the cell which shows the number of points of the player for a single tournament.
 
 
     <h3>Parameters:</h3>
@@ -1294,11 +1225,11 @@
          the mw.html row node to add the cell to
         </li>
         <li><span class="parameter">rowArgs</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#cellTeamData">{cellTeamData,...}</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#cellPlayerData">{cellPlayerData,...}</a></span>
 
         </li>
         <li><span class="parameter">cell</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#cellTeamData">cellTeamData</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#cellPlayerData">cellPlayerData</a></span>
 
         </li>
         <li><span class="parameter">c</span>
@@ -1322,7 +1253,7 @@
     <strong>makeDeductionPointsCell (frame, row, rowArgs, cell, c)</strong>
     </dt>
     <dd>
-    Creates the cell which shows the number of points deducted from an team for a single column.
+    Creates the cell which shows the number of points deducted from a player for a single column.
 
 
     <h3>Parameters:</h3>
@@ -1336,11 +1267,11 @@
          the mw.html row node to add the cell to
         </li>
         <li><span class="parameter">rowArgs</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#cellTeamData">{cellTeamData,...}</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#cellPlayerData">{cellPlayerData,...}</a></span>
 
         </li>
         <li><span class="parameter">cell</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#cellTeamData">cellTeamData</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#cellPlayerData">cellPlayerData</a></span>
 
         </li>
         <li><span class="parameter">c</span>
@@ -1504,30 +1435,30 @@
 
 </dd>
     <dt>
-    <a name = "teamData"></a>
-    <strong>teamData</strong>
+    <a name = "playerData"></a>
+    <strong>playerData</strong>
     </dt>
     <dd>
-    a table team contains a single team's information.
+    a player table contains a single player's information.
 
 
     <h3>Fields:</h3>
     <ul>
         <li><span class="parameter">name</span>
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
-         the name of the team - case sensitive
+         the name of the player - case sensitive
         </li>
         <li><span class="parameter">aliasX</span>
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
-         the alias of the team for tournament X - case sensitive
+         the alias of the player for tournament X - case sensitive
         </li>
         <li><span class="parameter">deductionX</span>
             <span class="types"><span class="type">number</span></span>
-         the deduction points for this team in tournament X
+         the deduction points for this player in tournament X
         </li>
         <li><span class="parameter">displayTemplate</span>
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
-         the name of the template to use when rendering the team cell
+         the name of the template to use when rendering the player cell
         </li>
     </ul>
 
@@ -1541,7 +1472,7 @@
     <strong>prettyResult</strong>
     </dt>
     <dd>
-    a table that contains a team's result for a single tournament
+    a table that contains a player's result for a single tournament
 
 
     <h3>Fields:</h3>
@@ -1550,9 +1481,9 @@
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
 
         </li>
-        <li><span class="parameter">teamName</span>
+        <li><span class="parameter">playerName</span>
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
-         the name of the team during this tournament - accounts for aliases
+         the name of the player during this tournament - accounts for aliases
         </li>
         <li><span class="parameter">prizepoints</span>
             <span class="types"><span class="type">number</span></span>
@@ -1570,11 +1501,11 @@
 
 </dd>
     <dt>
-    <a name = "teamPoints"></a>
-    <strong>teamPoints</strong>
+    <a name = "playerPoints"></a>
+    <strong>playerPoints</strong>
     </dt>
     <dd>
-    a table that contains the team data for a single tournament.
+    a table that contains the player data for a single tournament.
 
 
     <h3>Fields:</h3>
@@ -1583,17 +1514,17 @@
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
          - a reference to the table (the tournament/deduction) which is represented by this data entry
         </li>
-        <li><span class="parameter">team</span>
+        <li><span class="parameter">player</span>
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
-         - a reference to an team
+         - a reference to an player
         </li>
         <li><span class="parameter">points</span>
             <span class="types"><span class="type">number</span></span>
-         - the points of the team in this entry
+         - the points of the player in this entry
         </li>
         <li><span class="parameter">total</span>
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
-         - a table containing the total points of this team
+         - a table containing the total points of this player
         </li>
     </ul>
 
@@ -1603,11 +1534,11 @@
 
 </dd>
     <dt>
-    <a name = "cellTeamData"></a>
-    <strong>cellTeamData</strong>
+    <a name = "cellPlayerData"></a>
+    <strong>cellPlayerData</strong>
     </dt>
     <dd>
-    same as <a href="../modules/AutoPointsTable.html#teamPoints">teamPoints</a> in addition to <a href="../modules/AutoPointsTable.html#cssData">cssData</a>.
+    same as <a href="../modules/PlayerAutoPointsTable.html#playerPoints">playerPoints</a> in addition to <a href="../modules/PlayerAutoPointsTable.html#cssData">cssData</a>.
 
 
     <h3>Fields:</h3>
@@ -1616,20 +1547,20 @@
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
          - a reference to the table (the tournament/deduction) which is represented by this data entry
         </li>
-        <li><span class="parameter">team</span>
+        <li><span class="parameter">player</span>
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
-         - a reference to an team
+         - a reference to an player
         </li>
         <li><span class="parameter">points</span>
             <span class="types"><span class="type">number</span></span>
-         - the points of the team in this entry
+         - the points of the player in this entry
         </li>
         <li><span class="parameter">total</span>
             <span class="types"><a class="type" href="https://www.lua.org/manual/5.1/manual.html#5.5">table</a></span>
-         - a table containing the total points of this team
+         - a table containing the total points of this player
         </li>
         <li><span class="parameter">cssArgs</span>
-            <span class="types"><a class="type" href="../modules/AutoPointsTable.html#cssData">cssData</a></span>
+            <span class="types"><a class="type" href="../modules/PlayerAutoPointsTable.html#cssData">cssData</a></span>
 
         </li>
     </ul>
