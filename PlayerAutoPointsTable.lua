@@ -554,7 +554,7 @@ end
 --- Fetches a tournament index from a tournaments table using tournament fullName.
 -- @tparam {tournament,...} tournaments
 -- @tparam string tournamentName
--- @return ?|nil|number tournamentIndex
+-- @treturn ?|nil|number tournamentIndex
 function getIndexByName(tournaments, tournamentName)
     for _, tournament in pairs(tournaments) do
         if tournament['fullName'] == tournamentName then

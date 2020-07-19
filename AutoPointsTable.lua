@@ -181,7 +181,7 @@ end
 -- Fetches the table of teams provided by the main arguments to the template that invokes this module - case sensitive.
 -- @tparam table args the main template arguments
 -- @tparam number numberOfTournaments the number of tournaments to check aliases for
--- @treturn table teams a table that contains data about teams; their name, aliases and point deductions in any of the tournaments
+-- @treturn {{teamData,...},...} a table that contains data about teams; their name, aliases and point deductions in any of the tournaments
 function fetchTeamData(args, numberOfTournaments)
     local teams = {}
     for argKey, argVal in pairs(args) do
@@ -435,7 +435,7 @@ function addDeductionArgs(headerArgs, title)
 end
 
 --- Fetches the points of a team for the given tournaments.
--- @tparam table team
+-- @tparam teamData team
 -- @tparam {tournament,...} tournaments
 -- @tparam {tournament,...} deductions
 -- @return @{teamPoints}
@@ -552,7 +552,7 @@ end
 --- Fetches a tournament index from a tournaments table using tournament fullName.
 -- @tparam {tournament,...} tournaments
 -- @tparam string tournamentName
--- @return ?|nil|number tournamentIndex
+-- @treturn ?|nil|number tournamentIndex
 function getIndexByName(tournaments, tournamentName)
     for _, tournament in pairs(tournaments) do
         if tournament['fullName'] == tournamentName then

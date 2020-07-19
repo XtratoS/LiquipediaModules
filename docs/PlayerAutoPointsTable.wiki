@@ -60,7 +60,7 @@
 *Attaches the position background colors to the main data table. Attaches the position background colors to the main data table.
 *Parameters:
 **args table the main template arguments
-**data {{cellPlayerData,...},...}
+**data { {cellPlayerData,...},...}
 **players table
 *Returns:
 **nil 
@@ -135,7 +135,7 @@
 **tournaments {tournament,...}
 **tournamentName string
 *Returns:
-**?|nil|number tournamentIndex 
+**nil or number tournamentIndex 
 ===getTournamentPointsString (tournament)===
 *Uses default values for tournaments which a player didn't get any points in.
 *Parameters:
@@ -147,7 +147,7 @@
 *Parameters:
 **frame frame
 **args table the main template arguments
-**data {{cellPlayerData,...},...} the data table that contains the player's data
+**data { {cellPlayerData,...},...} the data table that contains the player's data
 **tournaments tournament a table that contains the tournaments data
 **deductions tournament a table that contains the deduction columns' data
 *Returns:
