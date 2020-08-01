@@ -23,6 +23,9 @@ local gConfig = {}
 function p.main(frame)
     local args = getArgs(frame)
 
+    -- expandExtraArgs(args)
+    -- cleanifyArgs(args)
+
     if MandatoryInputArgsExist(args) then end
     
     setUnprovidedArgsToDefault(args)
@@ -52,8 +55,16 @@ function p.main(frame)
     local pointsTable = makePointsTable(frame, args, tableData, tournaments, deductions)
 
     return pointsTable
-    -- return tprint(tableData)
+    -- return tprint(args)..'\n\n\n\n'..tprint(tableData)
 
+end
+
+function cleanifyArgs(args)
+    for key, val in pairs(args) do
+        if val == 'r' then
+            args[key] = nil
+        end
+    end
 end
 
 --- Checks for mandatory inputs and throws an error if any of them isn't provided.
@@ -72,12 +83,10 @@ function setUnprovidedArgsToDefault(args)
     if not args['header-height'] then
         args['header-height'] = 100
     end
-    if args['width'] then
+    if args['minified'] == 'true' then
+        args['width'] = 45 + 225 + 75 + 1
+    elseif args['width'] then
         args['width'] = args['width']
-    else
-        if args['minified'] == 'true' then
-            args['width'] = 45 + 225 + 75 + 1
-        end
     end
     if not args['concept'] then
         args['concept'] = 'Prizepoint_subobjects'
@@ -108,6 +117,9 @@ function setGlobalConfig(args)
     else
         gConfig['cutafter'] = 16
     end
+    if args['headerstart-template'] then
+        gConfig['headerStartTemplate'] = args['headerstart-template']
+    end
     gConfig['headerHeight'] = args['header-height']
     gConfig['width'] = args['width']
     gConfig['concept'] = args['concept']
@@ -116,18 +128,25 @@ end
 
 --- Custom sorting function.
 -- Sorts the teams by their total points then names in-case of a tie.
--- @tparam teamPoints a
--- @tparam teamPoints b
+-- @tparam cellTeamData a
+-- @tparam cellTeamData b
 function sortData(a, b)
     local totalPointsA = a['total']['totalPoints']
     local totalPointsB = b['total']['totalPoints']
+    local hiddenPointsA = a['team']['hiddenPoints']
+    local hiddenPointsB = b['team']['hiddenPoints']
     local nameA = a['team']['name']
     local nameB = b['team']['name']
 
     if totalPointsA == totalPointsB then
-        return nameA < nameB
+        if hiddenPointsA == hiddenPointsB then
+            return nameA < nameB
+        else
+            return hiddenPointsA > hiddenPointsB
+        end
+    else
+        return totalPointsA > totalPointsB
     end
-    return totalPointsA > totalPointsB
 end
 
 --- Fetches the tournament arguments provided.
@@ -206,6 +225,15 @@ function fetchTeamData(args, numberOfTournaments)
                     tempTeam['deduction'..j] = deduction
                 end
             end
+            if args[teamName..'hiddenpoints'] then
+                if tonumber(args[teamName..'hiddenpoints']) then
+                    tempTeam['hiddenPoints'] = tonumber(args[teamName..'hiddenpoints'])
+                else
+                    tempTeam['hiddenPoints'] = 0
+                end
+            else
+                tempTeam['hiddenPoints'] = 0
+            end
             table.insert(teams, tempTeam)
         end
     end
@@ -240,6 +268,20 @@ function expandSubTemplates(args)
     return nArgs
 end
 
+-- function expandExtraArgs(args)
+--     if args['extra'] then
+--         local extraArgs = split(args['extra'], '$')
+--         for argKey, argVal in pairs(extraArgs) do
+--             if string.find(argVal, '==') then
+--                 local tempArr = split(argVal, '==')
+--                 local subArgKey = tempArr[1]
+--                 local subArgVal = tempArr[2]
+--                 args[subArgKey] = subArgVal
+--             end
+--         end
+--     end
+-- end
+
 --- Attaches styling data.
 -- Attaches the styling data to the main data,
 -- uses the teams' names to get the corresponding styling data from the main arguments if they exist,
@@ -258,7 +300,8 @@ function attachStylingDataToMainData(args, data, teams)
                 string.find(mainArgName, 'fg'),
                 string.find(mainArgName, 'bold')
             }
-            if string.find(mainArgName, teamName) and
+            local escapedTeamName = teamName:gsub('([^%w])', '%%%1')
+            if string.find(mainArgName, escapedTeamName) and
             (conditions[1] or conditions[2] or conditions[3]) then
                 if not data[i]['cssArgs'] then
                     data[i]['cssArgs'] = {}
@@ -266,7 +309,7 @@ function attachStylingDataToMainData(args, data, teams)
 
                 -- ex:  mainArgName ->  cssArgName
                 -- ex:  Roguebg1    ->  bg1
-                local cssArgName = string.gsub(mainArgName, teamName, '')
+                local cssArgName = string.gsub(mainArgName, escapedTeamName, '')
                 data[i]['cssArgs'][cssArgName] = mainArgVal
             end
         end
@@ -334,6 +377,8 @@ function makeDefaultTableHeaders(frame, tournaments, deductions)
     if gConfig['minified'] == true then
         headerStartTemplate = 'RankingsTable/MinifiedHeaderStart'
         headerHeight = 33
+    elseif gConfig['headerStartTemplate'] then
+        headerStartTemplate = gConfig['headerStartTemplate']
     else
         headerStartTemplate = 'RankingsTable/HeaderStart'
     end
@@ -692,13 +737,19 @@ function renderTableBody(frame, htmlTable, data)
     local apparentPosition = 1
     local actualPosition = 1
     local previousPoints
+    local previousHiddenPoints
     if data[1] then
-        previousPoints = data[1]['total']['totalPoints']
+        previousHiddenPoints = data[1]['team']['hiddenPoints']
+        previousPoints = data[1]['total']['totalPoints'] + previousHiddenPoints
     end
     local rowCounter = 0
     local currentPoints
+    local currentHiddenPoints
     for _, dataRow in pairs(data) do
-        currentPoints = dataRow['total']['totalPoints']
+
+        currentHiddenPoints = dataRow['team']['hiddenPoints']
+        currentPoints = dataRow['total']['totalPoints'] + currentHiddenPoints
+        
         if currentPoints < previousPoints then
             apparentPosition = actualPosition
         else
@@ -842,8 +893,6 @@ function makeTeamCell(frame, row, rowArgs)
     end
     td
         :css('text-align', 'left')
-        :css('overflow', 'hidden')
-        :css('max-width', '225px')
         :wikitext(expandedTeam)
     
     styleItem(td, rowArgs['cssArgs'], 2)
@@ -956,6 +1005,8 @@ return p
 -- @tfield string name the name of the team - case sensitive
 -- @tfield string aliasX the alias of the team for tournament X - case sensitive
 -- @tfield number deductionX the deduction points for this team in tournament X
+-- @tfield string strike whether this team should be striked when being rendered or not
+-- @tfield number hiddenpoints the number of hidden points for this team, useful for tiebreakers
 -- @tfield string displayTemplate the name of the template to use when rendering the team cell
 -- @table teamData
 
