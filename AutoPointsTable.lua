@@ -1,5 +1,5 @@
 ---- This Module creates a table that shows the points of teams in a point system tournament (using subobjects defined in prizepool templates), this was mainly created for the new Circuit System starting RLCS Season X.
----- Revision 1.0
+---- Revision 1.1
 ----
 ---- Team Names are case sensitive
 ----
@@ -23,7 +23,7 @@ local gConfig = {}
 function p.main(frame)
     local args = getArgs(frame)
 
-    -- expandExtraArgs(args)
+    expandExtraArgs(args)
     -- cleanifyArgs(args)
 
     if MandatoryInputArgsExist(args) then end
@@ -83,10 +83,10 @@ function setUnprovidedArgsToDefault(args)
     if not args['header-height'] then
         args['header-height'] = 100
     end
-    if args['minified'] == 'true' then
-        args['width'] = 45 + 225 + 75 + 1
-    elseif args['width'] then
+    if args['width'] then
         args['width'] = args['width']
+    elseif args['minified'] == 'true' then
+        args['width'] = 45 + 225 + 75 + 1
     end
     if not args['concept'] then
         args['concept'] = 'Prizepoint_subobjects'
@@ -212,8 +212,8 @@ function fetchTeamData(args, numberOfTournaments)
             if args[teamName..'strike'] == 'true' then
                 tempTeam['strikeThrough'] = true
             end
-            if args[teamName..'display-template'] then
-                tempTeam['displayTemplate'] = args[teamName..'display-template']
+            if args[teamName..'display'] then
+                tempTeam['display'] = args[teamName..'display']
             end
             for j = 1, numberOfTournaments do
                 if args[teamName..'alias'..j] then
@@ -251,8 +251,8 @@ function expandSubTemplates(args)
             if string.find(argVal, '$') then
                 local subArgs = split(argVal, '$')
                 for i, subArg in pairs(subArgs) do
-                    if string.find(subArg, '=') then
-                        local ss = split(subArg, '=')
+                    if string.find(subArg, '≃') then
+                        local ss = split(subArg, '≃')
                         nArgs[ss[1]] = ss[2]
                     else
                         table.insert(nArgs, subArg)
@@ -268,19 +268,19 @@ function expandSubTemplates(args)
     return nArgs
 end
 
--- function expandExtraArgs(args)
---     if args['extra'] then
---         local extraArgs = split(args['extra'], '$')
---         for argKey, argVal in pairs(extraArgs) do
---             if string.find(argVal, '==') then
---                 local tempArr = split(argVal, '==')
---                 local subArgKey = tempArr[1]
---                 local subArgVal = tempArr[2]
---                 args[subArgKey] = subArgVal
---             end
---         end
---     end
--- end
+function expandExtraArgs(args)
+    if args['extra'] then
+        local extraArgs = split(args['extra'], '$')
+        for argKey, argVal in pairs(extraArgs) do
+            if string.find(argVal, '≈') then
+                local tempArr = split(argVal, '≈')
+                local subArgKey = tempArr[1]
+                local subArgVal = tempArr[2]
+                args[subArgKey] = subArgVal
+            end
+        end
+    end
+end
 
 --- Attaches styling data.
 -- Attaches the styling data to the main data,
@@ -678,10 +678,11 @@ end
 -- @return node div - the secondary wrapper which wraps the table and is wrapped inside the primary wrapper, the primary wrapper is the wrapper which should be returned by the main fucntion
 function createTableWrapper(columnCount)
     local tableWidth
+    local headerHeight = gConfig['headerHeight']
     if gConfig['width'] then
         tableWidth = gConfig['width']
     else
-        tableWidth = 312 + 50 * (columnCount) + gConfig['headerHeight']
+        tableWidth = 312 + 50 * (columnCount) + headerHeight
     end
     local tableWrapper = mw.html.create('div')
     tableWrapper
@@ -875,26 +876,24 @@ end
 function makeTeamCell(frame, row, rowArgs)
     local td = row:tag('td')
     local expandedTeam
-    local displayTemplate
+    local display
     local strike
     local teamName = rowArgs['team']['name']
 
-    if rowArgs['team']['displayTemplate'] then
-        displayTemplate = rowArgs['team']['displayTemplate']
+    if rowArgs['team']['display'] then
+        expandedTeam = rowArgs['team']['display']
     else
-        displayTemplate = 'Team'
+        expandedTeam = protectedExpansion(frame, 'Team', {teamName})
     end
     if rowArgs['team']['strikeThrough'] then
         strike = true
     end
-    expandedTeam = protectedExpansion(frame, displayTemplate, {teamName})
     if strike then
         expandedTeam = '<s>'..expandedTeam..'</s>'
     end
     td
         :css('text-align', 'left')
         :wikitext(expandedTeam)
-    
     styleItem(td, rowArgs['cssArgs'], 2)
         :done()
 end
@@ -1007,7 +1006,7 @@ return p
 -- @tfield number deductionX the deduction points for this team in tournament X
 -- @tfield string strike whether this team should be striked when being rendered or not
 -- @tfield number hiddenpoints the number of hidden points for this team, useful for tiebreakers
--- @tfield string displayTemplate the name of the template to use when rendering the team cell
+-- @tfield string display the name of the template to use when rendering the team cell
 -- @table teamData
 
 --- a table that contains a team's result for a single tournament
