@@ -554,7 +554,7 @@ function queryTeamResultsFromSMW(team, tournaments)
     end
     teamString = '[[Has team page::'..teamString..']] '
 
-    local queryResults = mw.smw.ask(conceptString..teamString..'|?Has prizepoints|?Has tournament name|?Has team page|?Has placement')
+    local queryResults = mw.smw.ask(conceptString..teamString..'|?Has prizepoints|?Has tournament name|?Has team page#-|?Has placement')
 
     if queryResults then
         local prettyResults = {}
@@ -568,7 +568,7 @@ function queryTeamResultsFromSMW(team, tournaments)
                 else
                     teamAlias = team['name']
                 end
-                local resultTeamName = teamNameFromTeamPage(result['Has team page'])
+                local resultTeamName = result['Has team page']
                 if teamAlias == resultTeamName then
                     prettyResults[tournamentIndex] = {
                         tournamentName = tournamentName,
