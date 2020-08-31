@@ -1,5 +1,5 @@
 ---- This Module creates a table that shows the points of teams in a point system tournament (using subobjects defined in prizepool templates), this was mainly created for the new Circuit System starting RLCS Season X.
----- Revision 1.1
+---- Revision 1.11
 ----
 ---- Team Names are case sensitive
 ----
@@ -223,6 +223,10 @@ function fetchTeamData(args, numberOfTournaments)
                 if args[teamName..'deduction'..j] then
                     local deduction = tonumber(args[teamName..'deduction'..j])
                     tempTeam['deduction'..j] = deduction
+                end
+                if args[teamName..'points'..j] then
+                    local points = tonumber(args[teamName..'points'..j])
+                    tempTeam['points'..j] = points
                 end
             end
             if args[teamName..'hiddenpoints'] then
@@ -516,6 +520,19 @@ function getTeamPointsData(team, tournaments, deductions)
                 }
             end
 
+            local manualPoints = getManualPoints(team, columnIndex)
+            if manualPoints then
+                local temp = prettyData[columnIndex]['points']
+                local originalPoints
+                if type(temp) == 'number' then
+                    originalPoints = temp
+                else
+                    originalPoints = 0
+                end
+                totalPoints = totalPoints - originalPoints + manualPoints
+                prettyData[columnIndex]['points'] = manualPoints
+            end
+
             columnIndex = columnIndex + 1
             -- if the tournament has a deductions column name value provided, then check if the provided team has any deductions from this tournaments' points
             if deductions[tournamentIndex] then
@@ -618,6 +635,20 @@ function getTournamentPointsString(tournament)
         tempString = ''
     end
     return tempString
+end
+
+--- gets the deduction points of a team for a single column.
+-- @tparam teamData team
+-- @tparam number columnIndex the index of the column for which the points are returned
+-- @treturn ?|nil|number the team overwrite points for this column, nil if there isn't
+function getManualPoints(team, columnIndex)
+    local points
+    if team['points'..columnIndex] then
+        points = team['points'..columnIndex]
+    else
+        points = nil
+    end
+    return points
 end
 
 --- gets the deduction points of a team for a single tournament.
