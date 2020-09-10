@@ -24,7 +24,6 @@ function p.main(frame)
     local args = getArgs(frame)
 
     expandExtraArgs(args)
-    -- cleanifyArgs(args)
 
     if MandatoryInputArgsExist(args) then end
     
@@ -48,23 +47,15 @@ function p.main(frame)
     
     attachStylingDataToMainData(args, tableData, teams)
 
-    table.sort(tableData, sortData)
+    -- table.sort(tableData, sortData)
     
-    attachPositionBackgroundColorsToCells(args, tableData, teams)
+    -- attachPositionBackgroundColorsToCells(args, tableData, teams)
 
     local pointsTable = makePointsTable(frame, args, tableData, tournaments, deductions)
 
     return pointsTable
     -- return tprint(args)..'\n\n\n\n'..tprint(tableData)
 
-end
-
-function cleanifyArgs(args)
-    for key, val in pairs(args) do
-        if val == 'r' then
-            args[key] = nil
-        end
-    end
 end
 
 --- Checks for mandatory inputs and throws an error if any of them isn't provided.
@@ -101,7 +92,8 @@ function setGlobalConfig(args)
         'started',
         'bg>pbg',
         'minified',
-        'unique'
+        'unique',
+        'historical'
     }) do
         if args[configProp] == 'true' then
             gConfig[configProp] = true
@@ -124,6 +116,17 @@ function setGlobalConfig(args)
     gConfig['width'] = args['width']
     gConfig['concept'] = args['concept']
     gConfig['headerHeight'] = args['header-height']
+    if gConfig['historical'] == true then
+        gConfig.stages = {}
+        local i = 1
+        while (args['stage'..i..'name']) do
+            table.insert(gConfig.stages, {
+                name = args['stage'..i..'name'],
+                cutoff = args['stage'..i..'cutoff']
+            })
+            i = i + 1
+        end
+    end
 end
 
 --- Custom sorting function.
@@ -131,8 +134,8 @@ end
 -- @tparam cellTeamData a
 -- @tparam cellTeamData b
 function sortData(a, b)
-    local totalPointsA = a['total']['totalPoints']
-    local totalPointsB = b['total']['totalPoints']
+    local totalPointsA = a['total']['points']
+    local totalPointsB = b['total']['points']
     local hiddenPointsA = a['team']['hiddenPoints']
     local hiddenPointsB = b['team']['hiddenPoints']
     local nameA = a['team']['name']
@@ -147,6 +150,29 @@ function sortData(a, b)
     else
         return totalPointsA > totalPointsB
     end
+end
+
+function sortPartial(data, index)
+    table.sort(data,
+        function (a, b)
+            local totalPointsA = a['total'..index]['points']
+            local totalPointsB = b['total'..index]['points']
+            local hiddenPointsA = a['team']['hiddenPoints']
+            local hiddenPointsB = b['team']['hiddenPoints']
+            local nameA = a['team']['name']
+            local nameB = b['team']['name']
+
+            if totalPointsA == totalPointsB then
+                if hiddenPointsA == hiddenPointsB then
+                    return nameA < nameB
+                else
+                    return hiddenPointsA > hiddenPointsB
+                end
+            else
+                return totalPointsA > totalPointsB
+            end
+        end
+    )
 end
 
 --- Fetches the tournament arguments provided.
@@ -379,7 +405,7 @@ function makeDefaultTableHeaders(frame, tournaments, deductions)
     local translateY = (headerHeight - 50) / 2 + 1
     local headerStartTemplate
     if gConfig['minified'] == true then
-        headerStartTemplate = 'RankingsTable/MinifiedHeaderStart'
+        headerStartTemplate = 'User:XtratoS/MHS'
         headerHeight = 33
     elseif gConfig['headerStartTemplate'] then
         headerStartTemplate = gConfig['headerStartTemplate']
@@ -492,7 +518,6 @@ function getTeamPointsData(team, tournaments, deductions)
     local prettyData = {
         team = team
     }
-    local totalPoints = 0
     local tournamentIndex = 1
 
     local columnIndex = 1
@@ -505,7 +530,6 @@ function getTeamPointsData(team, tournaments, deductions)
             if tournamentQueryResults and tournamentQueryResults[tournamentIndex] then
                 local queryResult = tournamentQueryResults[tournamentIndex]
                 local queryPoints = queryResult['prizepoints']
-                totalPoints = totalPoints + queryPoints
                 prettyData[columnIndex] = {
                     tournament = tournament,
                     points = queryPoints,
@@ -522,14 +546,6 @@ function getTeamPointsData(team, tournaments, deductions)
 
             local manualPoints = getManualPoints(team, columnIndex)
             if manualPoints then
-                local temp = prettyData[columnIndex]['points']
-                local originalPoints
-                if type(temp) == 'number' then
-                    originalPoints = temp
-                else
-                    originalPoints = 0
-                end
-                totalPoints = totalPoints - originalPoints + manualPoints
                 prettyData[columnIndex]['points'] = manualPoints
             end
 
@@ -538,7 +554,6 @@ function getTeamPointsData(team, tournaments, deductions)
             if deductions[tournamentIndex] then
                 local deduction = deductions[tournamentIndex]
                 local deductionPoints = getTeamDeductionPointsByIndex(team, tournamentIndex)
-                totalPoints = totalPoints - deductionPoints
                 prettyData[columnIndex] = {
                     tournament = deduction,
                     points = deductionPoints
@@ -550,8 +565,26 @@ function getTeamPointsData(team, tournaments, deductions)
         end
     end
 
+    local totalPoints = 0
+
+    for columnIndex, val in pairs(prettyData) do
+        if type(columnIndex) == 'number' then
+            local tempPoints = tonumber(val.points)
+            if tempPoints ~= nil then
+                if val.tournament.type == 'tournament' then
+                    totalPoints = totalPoints + tempPoints
+                elseif val.tournament.type == 'deduction' then
+                    totalPoints = totalPoints - tempPoints
+                end
+            end
+            prettyData['total'..columnIndex] = {
+                points = totalPoints
+            }
+        end
+    end
+    
     prettyData['total'] = {
-        totalPoints = totalPoints
+        points = totalPoints
     }
 
     return prettyData
@@ -700,8 +733,9 @@ function makePointsTable(frame, args, data, tournaments, deductions)
     renderTableBody(frame, htmlTable, data)
 
     htmlTable:done()
-    tableWrapper:allDone()
-    return secondaryWrapper.parent
+    tableWrapper:done()
+    tableWrapper.parent:done()
+    return tableWrapper.parent
 end
 
 --- Creates the wrapper div which wraps the table node for mobile responsiveness.
@@ -717,7 +751,8 @@ function createTableWrapper(columnCount)
     end
     local tableWrapper = mw.html.create('div')
     tableWrapper
-        :addClass('table-responsive')
+        :addClass('table-responsive toggle-area toggle-area-3')
+        :attr('data-toggle-area', '3')
     secondaryWrapper = tableWrapper:tag('div')
     secondaryWrapper
         :css('width', tableWidth..'px')
@@ -734,9 +769,6 @@ function createTableTag(tableWrapper)
     local htmlTable = tableWrapper:tag('table')
     htmlTable
         :addClass('wikitable')
-        :addClass('prizepooltable')
-        :addClass('collapsed')
-        :attr('data-cutafter', gConfig['cutafter'])
         :css('text-align', 'center')
         :css('margin', '0px')
         :css('width', '0')
@@ -772,39 +804,53 @@ function renderTableBody(frame, htmlTable, data)
     local previousHiddenPoints
     if data[1] then
         previousHiddenPoints = data[1]['team']['hiddenPoints']
-        previousPoints = data[1]['total']['totalPoints'] + previousHiddenPoints
+        previousPoints = data[1]['total']['points'] + previousHiddenPoints
     end
     local rowCounter = 0
     local currentPoints
     local currentHiddenPoints
-    for _, dataRow in pairs(data) do
 
-        currentHiddenPoints = dataRow['team']['hiddenPoints']
-        currentPoints = dataRow['total']['totalPoints'] + currentHiddenPoints
-        
-        if currentPoints < previousPoints then
-            apparentPosition = actualPosition
-        else
-            if gConfig['unique'] == true then
+    for key, stage in pairs(gConfig.stages) do
+        local cutoff = stage.cutoff
+        sortPartial(data, cutoff)
+
+        for index, dataRow in pairs(data) do
+
+            -- currentHiddenPoints = dataRow['team']['hiddenPoints']
+            currentHiddenPoints = 0
+            currentPoints = dataRow['total']['points'] + currentHiddenPoints
+            
+            if currentPoints < previousPoints then
                 apparentPosition = actualPosition
+            else
+                if gConfig['unique'] == true then
+                    apparentPosition = actualPosition
+                end
             end
-        end
-        previousPoints = currentPoints
-
-        dataRow['position'] = {
-            position = apparentPosition
-        }
-
-        local tableRow = renderRow(frame, dataRow)
-        htmlTable:node(tableRow)
-        rowCounter = rowCounter + 1
-        if gConfig['limit'] then
-            local limit = gConfig['limit']
-            if rowCounter >= limit then
-                return
+            previousPoints = currentPoints
+    
+            dataRow['position'] = {
+                position = apparentPosition
+            }
+    
+            local tableRow = renderRow(frame, dataRow, cutoff)
+            htmlTable:node(tableRow)
+            rowCounter = rowCounter + 1
+            if gConfig['limit'] then
+                local limit = gConfig['limit']
+                if rowCounter >= limit then
+                    return
+                end
             end
+            actualPosition = actualPosition + 1
         end
-        actualPosition = actualPosition + 1
+
+        currentHiddenPoints = 0
+        currentPoints = 0
+        previousPoints = 0
+        previousHiddenPoints = 0
+        apparentPosition = 1
+        actualPosition = 1
     end
 end
 
@@ -843,10 +889,11 @@ end
 -- @tparam frame frame
 -- @tparam cellTeamData rowArgs
 -- @return mw.html tr - table row represented by an mw.html object
-function renderRow(frame, rowArgs)
+function renderRow(frame, rowArgs, stageIndex)
     local teamName = rowArgs['team']['name']
 
     local row = mw.html.create('tr')
+    row:attr('data-toggle-area-content', stageIndex)
 
     makePositionCell(row, rowArgs)
 
@@ -938,7 +985,7 @@ function makeTotalPointsCell(row, rowArgs)
     td
         :css('font-weight', 'bold')
     if gConfig['started'] == true then
-        td:wikitext(rowArgs['total']['totalPoints'])
+        td:wikitext(rowArgs['total']['points'])
     end
 
     styleItem(td, rowArgs['cssArgs'], 3)
