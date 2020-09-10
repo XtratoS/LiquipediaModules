@@ -1,5 +1,5 @@
 ---- This Module creates a table that shows the points of players in a point system tournament (using subobjects defined in prizepool templates), this was mainly created for the Astronauts Star Circuit.
----- Revision 1.0
+---- Revision 1.1
 ----
 ---- Player Names are case sensitive
 ----
@@ -209,6 +209,10 @@ function fetchPlayerData(args, numberOfTournaments)
                     local deduction = tonumber(args[playerIndex..'deduction'..j])
                     tempPlayer['deduction'..j] = deduction
                 end
+                if args[playerIndex..'points'..j] then
+                    local points = tonumber(args[playerIndex..'points'..j])
+                    tempPlayer['points'..j] = points
+                end
             end
             table.insert(players, tempPlayer)
         end
@@ -229,8 +233,8 @@ function expandSubTemplates(args)
                 local playerName
                 local subArgs = split(argVal, '$')
                 for i, subArg in pairs(subArgs) do
-                    if string.find(subArg, '=') then
-                        local ss = split(subArg, '=')
+                    if string.find(subArg, '≃') then
+                        local ss = split(subArg, '≃')
                         local subKey = ss[1]:gsub(playerName, playerIndex)
                         nArgs[subKey] = ss[2]
                     else
@@ -453,7 +457,6 @@ function getPlayerPointsData(player, tournaments, deductions)
     local prettyData = {
         player = player
     }
-    local totalPoints = 0
     local tournamentIndex = 1
 
     local columnIndex = 1
@@ -466,7 +469,6 @@ function getPlayerPointsData(player, tournaments, deductions)
             if tournamentQueryResults and tournamentQueryResults[tournamentIndex] then
                 local queryResult = tournamentQueryResults[tournamentIndex]
                 local queryPoints = queryResult['prizepoints']
-                totalPoints = totalPoints + queryPoints
                 prettyData[columnIndex] = {
                     tournament = tournament,
                     points = queryPoints,
@@ -479,6 +481,11 @@ function getPlayerPointsData(player, tournaments, deductions)
                     tournament = tournament,
                     points = tournamentPointsString
                 }
+            end
+
+            local manualPoints = getManualPoints(player, columnIndex)
+            if manualPoints then
+                prettyData[columnIndex]['points'] = manualPoints
             end
 
             columnIndex = columnIndex + 1
@@ -495,6 +502,21 @@ function getPlayerPointsData(player, tournaments, deductions)
             end
 
             tournamentIndex = tournamentIndex + 1
+        end
+    end
+
+    local totalPoints = 0
+
+    for columnIndex, val in pairs(prettyData) do
+        if type(columnIndex) == 'number' then
+            local tempPoints = tonumber(val.points)
+            if tempPoints ~= nil then
+                if val.tournament.type == 'tournament' then
+                    totalPoints = totalPoints + tempPoints
+                elseif val.tournament.type == 'deduction' then
+                    totalPoints = totalPoints - tempPoints
+                end
+            end
         end
     end
 
@@ -575,6 +597,20 @@ function getTournamentPointsString(tournament)
         tempString = ''
     end
     return tempString
+end
+
+--- gets the deduction points of a player for a single column.
+-- @tparam playerData player
+-- @tparam number columnIndex the index of the column for which the points are returned
+-- @treturn ?|nil|number the player overwrite points for this column, nil if there isn't
+function getManualPoints(player, columnIndex)
+    local points
+    if player['points'..columnIndex] then
+        points = player['points'..columnIndex]
+    else
+        points = nil
+    end
+    return points
 end
 
 --- Creates the points table in html code.
