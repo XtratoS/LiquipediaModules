@@ -674,10 +674,12 @@ function getTeamPointsData(team, tournaments, deductions)
             -- if the tournament has a deductions column name value provided, then check if the provided team has any deductions from this tournaments' points
             if deductions[tournamentIndex] then
                 local deduction = deductions[tournamentIndex]
-                local deductionPoints, deductionNote = getTeamDeductionByIndex(team, tournamentIndex)
+                local deductionData = getTeamDeductionByIndex(team, tournamentIndex)
+                local deductionPoints = deductionData.points
+                local deductionNote = deductionData.note
                 prettyData[columnIndex] = {
                     tournament = deduction,
-                    points = deductionPoints,
+                    deductionPoints = deductionPoints,
                     deductionNote = deductionNote
                 }
                 columnIndex = columnIndex + 1
@@ -812,7 +814,7 @@ end
 --- gets the deduction points of a team for a single tournament.
 -- @tparam teamData team
 -- @tparam number tournamentIndex the index of the tournament for which the deductions are returned
--- @treturn number points the number of deduction points for the team in the tournament
+-- @treturn @{deductionData} deduction data for the team in the tournament
 function getTeamDeductionByIndex(team, tournamentIndex)
     local points
     local note
@@ -824,7 +826,10 @@ function getTeamDeductionByIndex(team, tournamentIndex)
     if team['deduction'..tournamentIndex..'note'] then
         note = team['deduction'..tournamentIndex..'note']
     end
-    return points, note
+    return {
+        points = points,
+        note = note
+    }
 end
 
 --- Fetches the team name for a specific tournament.
@@ -1356,3 +1361,8 @@ return p
 -- @tfield string fgX foreground color for column X
 -- @tfield string boldX bold for column X
 -- @table cssData
+
+--- a table that contains the deduction data of a team in a tournament.
+-- @tfield number points the number of deduction points for the team in the tournament.
+-- @tfield ?|nil|string note the deduction note for the team in the tournament.
+-- @table deductionData
