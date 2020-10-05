@@ -1,5 +1,5 @@
 ---- This Module creates a table that shows the points of teams in a point system tournament (using subobjects defined in prizepool templates), this was mainly created for the new Circuit System starting RLCS Season X.
----- Revision 1.11
+---- Revision 1.21
 ----
 ---- Team Names are case sensitive
 ----
@@ -7,14 +7,22 @@
 ---- Everything else within this module uses camelCase.
 ----
 ---- The HTML Library was used to create the html code produced by this Module: https://www.mediawiki.org/wiki/Extension:Scribunto/Lua_reference_manual#HTML_library
+----
+---- It is assumed that each of the following templates already exist in the wiki:
+---- RankingsTable/MinifiedHistoricalHeaderStart
+---- RankingsTable/MinifiedHeaderStart
+---- RankingsTable/HistoricalHeaderStart
+---- RankingsTable/HeaderStart
 
 local p = {} --p stands for package
 
 local getArgs = require('Module:Arguments').getArgs
 local tprint = require('Module:TablePrinter').tprint
+local inspect = require('Module:Sandbox/inspect').inspect
 
 local SIN_45_DEG = math.floor(math.sin(math.rad(45))*100) / 100
 local gConfig = {}
+local gData = {}
 
 --- Entry point.
 -- This is the entry point of the Module.
@@ -24,11 +32,8 @@ function p.main(frame)
     local args = getArgs(frame)
 
     expandExtraArgs(args)
-
-    if MandatoryInputArgsExist(args) then end
-    
+    MandatoryInputArgsExist(args)
     setUnprovidedArgsToDefault(args)
-
     setGlobalConfig(args)
 
     local tournaments, deductions = fetchTournamentData(args)
@@ -37,7 +42,14 @@ function p.main(frame)
     args = expandSubTemplates(args)
 
     local numberOfTournaments = countEntries(tournaments)
-    local teams = fetchTeamData(args, numberOfTournaments)
+    local numberOfDeductions = countEntries(deductions)
+    gData.numberOfTournaments = numberOfTournaments
+    gData.numberOfDeductions = numberOfDeductions
+    gData.columnCount = numberOfTournaments + numberOfDeductions
+    
+    confirmCurrentStageExists()
+
+    local teams = fetchTeamData(args)
 
     local tableData = {}
     for i, team in pairs(teams) do
@@ -45,17 +57,115 @@ function p.main(frame)
         tableData[i] = teamPointsData
     end
     
-    attachStylingDataToMainData(args, tableData, teams)
+    attachStylingDataToTableData(args, tableData, teams)
 
-    -- table.sort(tableData, sortData)
-    
-    -- attachPositionBackgroundColorsToCells(args, tableData, teams)
+    table.sort(tableData, sortData)
+    addHistoricalPositionDataToTableData(args, tableData)
 
     local pointsTable = makePointsTable(frame, args, tableData, tournaments, deductions)
 
-    return pointsTable
+    return tostring(pointsTable)
+    -- '<br><pre>'..inspect(tableData)..'</pre>'
     -- return tprint(args)..'\n\n\n\n'..tprint(tableData)
 
+end
+
+--- Adds the default stage if there are no stages provided in the template arguments
+-- @return nil
+function confirmCurrentStageExists()
+    if gConfig.historical ~= true then
+        gConfig.stages[1].cutoff = gData.columnCount
+        return
+    end
+    if #gConfig.stages < 1 then
+        gConfig.stages = {{
+            name = 'Current',
+            cutoff = gData.columnCount
+        }}
+    end
+end
+
+--- Adds the historical position data for all teams to the provided data table
+-- @tparam table args the main template arguments
+-- @tparam {{cellTeamData,...},...} data the data table that contains the teams' data
+-- @return nil
+function addHistoricalPositionDataToTableData(args, data)
+
+    local previousCutoff = 0
+    for _, stage in pairs(gConfig.stages) do
+        local name = stage.name
+        local cutoff = stage.cutoff
+        sortPartial(data, cutoff)
+        local previousPoints = 0
+        local apparentPosition = 1
+        local actualPosition = 1
+        local rowCounter = 1
+        for _, dataRow in pairs(data) do
+            
+            currentPoints = dataRow['total'..cutoff]
+            
+            if currentPoints < previousPoints then
+                apparentPosition = actualPosition
+            else
+                if gConfig.unique == true then
+                    apparentPosition = actualPosition
+                end
+            end
+            previousPoints = currentPoints
+
+            local position
+            local trend
+            if dataRow['position'..previousCutoff] and tonumber(dataRow['position'..previousCutoff]['position']) then
+                local previousPosition = tonumber(dataRow['position'..previousCutoff]['position'])
+                if apparentPosition < previousPosition then
+                    trend = greenify('▲ ' .. (previousPosition - apparentPosition))
+                elseif apparentPosition > previousPosition then
+                    trend = redify('▼ ' .. (apparentPosition - previousPosition))
+                else
+                    trend = '-';
+                end
+            else
+                trend = '<b>New</b>'
+            end
+            dataRow['position'..cutoff] = {
+                position = apparentPosition,
+                trend = trend
+            }
+
+            local pbgColor = args['pbg'..actualPosition]
+            if pbgColor then
+                local pbgColor = pbgColor
+                if not dataRow.cssArgs[cutoff] then
+                    dataRow.cssArgs[cutoff] = {}
+                end
+                dataRow.cssArgs[cutoff].bg1 = pbgColor
+            end
+
+            rowCounter = rowCounter + 1
+            if gConfig['limit'] then
+                local limit = gConfig['limit']
+                if rowCounter > limit then
+                    break
+                end
+            end
+            actualPosition = actualPosition + 1
+        end
+        previousCutoff = cutoff
+    end
+end
+
+--- Wraps some text in a green colored span
+-- @tparam string text
+-- @treturn string span the html code for a green colored span which contains the provided text
+function greenify(text)
+    return '<span style="color: green;">'..text..'</span>'
+end
+
+--- Wraps some text in a red colored span
+-- @tparam string text
+-- @treturn string span the html code for a red colored span which contains the provided text
+function redify(text)
+    return '<span style="color: red;">'..text..'</span>'
 end
 
 --- Checks for mandatory inputs and throws an error if any of them isn't provided.
@@ -102,30 +212,46 @@ function setGlobalConfig(args)
         end
     end
     if args['limit'] then
-        gConfig['limit'] = tonumber(args['limit'])
+        gConfig.limit = tonumber(args['limit'])
     end
     if args['cutafter'] then
-        gConfig['cutafter'] = tonumber(args['cutafter'])
+        gConfig.cutafter = tonumber(args['cutafter'])
     else
-        gConfig['cutafter'] = 16
+        gConfig.cutafter = 16
     end
     if args['headerstart-template'] then
-        gConfig['headerStartTemplate'] = args['headerstart-template']
+        gConfig.headerStartTemplate = args['headerstart-template']
     end
-    gConfig['headerHeight'] = args['header-height']
-    gConfig['width'] = args['width']
-    gConfig['concept'] = args['concept']
-    gConfig['headerHeight'] = args['header-height']
-    if gConfig['historical'] == true then
+    gConfig.headerHeight = args['header-height']
+    gConfig.width = args['width']
+    gConfig.concept = args['concept']
+    gConfig.headerHeight = args['header-height']
+    if gConfig.historical == true then
         gConfig.stages = {}
         local i = 1
         while (args['stage'..i..'name']) do
             table.insert(gConfig.stages, {
                 name = args['stage'..i..'name'],
-                cutoff = args['stage'..i..'cutoff']
+                cutoff = tonumber(args['stage'..i..'cutoff'])
             })
             i = i + 1
         end
+        local currentStageIndex = tonumber(args['current-stage'])
+        if currentStageIndex <= #gConfig.stages then
+            gConfig.currentStageIndex = currentStageIndex
+        else
+            gConfig.currentStageIndex = math.max(#gConfig.stages, 1)
+        end
+    else
+        gConfig.stages = {{
+            name = 'Current'
+        }}
+        gConfig.currentStageIndex = 1
+    end
+    if args['stage-btn-width'] then
+        gConfig.stageBtnWidth = args['stage-btn-width']
+    else
+        gConfig.stageBtnWidth = '90'
     end
 end
 
@@ -133,13 +259,14 @@ end
 -- Sorts the teams by their total points then names in-case of a tie.
 -- @tparam cellTeamData a
 -- @tparam cellTeamData b
+-- @return nil
 function sortData(a, b)
-    local totalPointsA = a['total']['points']
-    local totalPointsB = b['total']['points']
-    local hiddenPointsA = a['team']['hiddenPoints']
-    local hiddenPointsB = b['team']['hiddenPoints']
-    local nameA = a['team']['name']
-    local nameB = b['team']['name']
+    local totalPointsA = a.total
+    local totalPointsB = b.total
+    local hiddenPointsA = a.hiddenPoints
+    local hiddenPointsB = b.hiddenPoints
+    local nameA = a.team.name
+    local nameB = b.team.name
 
     if totalPointsA == totalPointsB then
         if hiddenPointsA == hiddenPointsB then
@@ -152,15 +279,19 @@ function sortData(a, b)
     end
 end
 
+--- Sorts a set of data based on the total points up to a specific tournament
+-- @tparam {{cellTeamData,...},...} data the data table that contains the teams' data
+-- @tparam number index the index of the tournament with which the data is to be sorted by
+-- @return nil
 function sortPartial(data, index)
     table.sort(data,
         function (a, b)
-            local totalPointsA = a['total'..index]['points']
-            local totalPointsB = b['total'..index]['points']
-            local hiddenPointsA = a['team']['hiddenPoints']
-            local hiddenPointsB = b['team']['hiddenPoints']
-            local nameA = a['team']['name']
-            local nameB = b['team']['name']
+            local totalPointsA = a['total'..index]
+            local totalPointsB = b['total'..index]
+            local hiddenPointsA = a['hiddenPoints'..index]
+            local hiddenPointsB = b['hiddenPoints'..index]
+            local nameA = a.team.name
+            local nameB = b.team.name
 
             if totalPointsA == totalPointsB then
                 if hiddenPointsA == hiddenPointsB then
@@ -227,42 +358,51 @@ end
 -- @tparam table args the main template arguments
 -- @tparam number numberOfTournaments the number of tournaments to check aliases for
 -- @treturn {{teamData,...},...} a table that contains data about teams; their name, aliases and point deductions in any of the tournaments
-function fetchTeamData(args, numberOfTournaments)
+function fetchTeamData(args)
     local teams = {}
     for argKey, argVal in pairs(args) do
         if type(argKey) == 'number' then
             local teamName = argVal
             local tempTeam = {
-                name = teamName
+                name = teamName,
+                hiddenPoints = 0
             }
             if args[teamName..'strike'] == 'true' then
-                tempTeam['strikeThrough'] = true
+                tempTeam.strikeThrough = true
             end
             if args[teamName..'display'] then
-                tempTeam['display'] = args[teamName..'display']
+                tempTeam.display = args[teamName..'display']
             end
-            for j = 1, numberOfTournaments do
+
+            if args[teamName..'hiddenpoints'] then
+                args[teamName..'hiddenPoints'..gData.numberOfTournaments] = args[teamName..'hiddenpoints']
+            end
+
+            for j = 1, gData.numberOfTournaments do
+
                 if args[teamName..'alias'..j] then
                     local alias = args[teamName..'alias'..j]
                     tempTeam['alias'..j] = alias
                 end
+
                 if args[teamName..'deduction'..j] then
                     local deduction = tonumber(args[teamName..'deduction'..j])
                     tempTeam['deduction'..j] = deduction
+                    if args[teamName..'deduction'..j..'note'] then
+                        tempTeam['deduction'..j..'note'] = args[teamName..'deduction'..j..'note']
+                    end
                 end
+
                 if args[teamName..'points'..j] then
                     local points = tonumber(args[teamName..'points'..j])
                     tempTeam['points'..j] = points
                 end
-            end
-            if args[teamName..'hiddenpoints'] then
-                if tonumber(args[teamName..'hiddenpoints']) then
-                    tempTeam['hiddenPoints'] = tonumber(args[teamName..'hiddenpoints'])
-                else
-                    tempTeam['hiddenPoints'] = 0
+
+                if args[teamName..'hiddenpoints'..j] then
+                    local points = tonumber(args[teamName..'hiddenpoints'..j])
+                    tempTeam['hiddenPoints'..j] = points
                 end
-            else
-                tempTeam['hiddenPoints'] = 0
+
             end
             table.insert(teams, tempTeam)
         end
@@ -298,6 +438,9 @@ function expandSubTemplates(args)
     return nArgs
 end
 
+--- Expands the extra args provided in the template argument 'extra'.
+-- @tparam table args the main template arguments
+-- @return nil
 function expandExtraArgs(args)
     if args['extra'] then
         local extraArgs = split(args['extra'], '$')
@@ -320,10 +463,12 @@ end
 -- @tparam teamPoints data the data table to which the css data is to be attached
 -- @tparam table teams the table that contains the teams data
 -- @return nil
-function attachStylingDataToMainData(args, data, teams)
+function attachStylingDataToTableData(args, data, teams)
     for i, team in pairs(teams) do
         local teamName = team['name']
-
+        if not data[i].cssArgs then
+            data[i].cssArgs = {}
+        end
         for mainArgName, mainArgVal in pairs(args) do
             local conditions = {
                 string.find(mainArgName, 'bg'),
@@ -333,45 +478,10 @@ function attachStylingDataToMainData(args, data, teams)
             local escapedTeamName = teamName:gsub('([^%w])', '%%%1')
             if string.find(mainArgName, escapedTeamName) and
             (conditions[1] or conditions[2] or conditions[3]) then
-                if not data[i]['cssArgs'] then
-                    data[i]['cssArgs'] = {}
-                end
-
                 -- ex:  mainArgName ->  cssArgName
                 -- ex:  Roguebg1    ->  bg1
                 local cssArgName = string.gsub(mainArgName, escapedTeamName, '')
-                data[i]['cssArgs'][cssArgName] = mainArgVal
-            end
-        end
-    end
-end
-
---- Attaches the position background colors to the main data table.
--- Attaches the position background colors to the main data table.
--- @tparam table args the main template arguments
--- @tparam {{cellTeamData,...},...} data
--- @tparam table teams
--- @return nil
-function attachPositionBackgroundColorsToCells(args, data, teams)
-    local ShouldOverwrite = gConfig['bg>pbg']
-    for i, team in pairs(teams) do
-        if args['pbg'..i] then
-            local pbgColor = args['pbg'..i]
-            
-            if not data[i]['cssArgs'] then
-                data[i]['cssArgs'] = {
-                    bg1 = pbgColor
-                }
-            else
-                local cssArgs = data[i]['cssArgs']
-
-                if (not cssArgs['bg1']) and (not cssArgs['bg']) then
-                    cssArgs['bg1'] = pbgColor
-                else
-                    if ShouldOverwrite ~= true then
-                        cssArgs['bg1'] = pbgColor
-                    end
-                end
+                data[i].cssArgs[cssArgName] = mainArgVal
             end
         end
     end
@@ -405,10 +515,16 @@ function makeDefaultTableHeaders(frame, tournaments, deductions)
     local translateY = (headerHeight - 50) / 2 + 1
     local headerStartTemplate
     if gConfig['minified'] == true then
-        headerStartTemplate = 'User:XtratoS/MHS'
+        if gConfig.historical == true then
+            headerStartTemplate = 'RankingsTable/MinifiedHistoricalHeaderStart'
+        else
+            headerStartTemplate = 'RankingsTable/MinifiedHeaderStart'
+        end
         headerHeight = 33
     elseif gConfig['headerStartTemplate'] then
         headerStartTemplate = gConfig['headerStartTemplate']
+    elseif gConfig.historical == true then
+        headerStartTemplate = 'RankingsTable/HistoricalHeaderStart'
     else
         headerStartTemplate = 'RankingsTable/HeaderStart'
     end
@@ -424,14 +540,14 @@ function makeDefaultTableHeaders(frame, tournaments, deductions)
         return row
     end
     local columnIndex = 1
-    local columnCount = countEntries(tournaments) + countEntries(deductions)
+    local columnCount = gData['columnCount']
     for index, tournament in pairs(tournaments) do
         if type(tournament) == 'table' then
             local headerArgs = {
                 title = getTournamentHeaderTitle(tournament)
             }
 
-            appendDivToLastThreeHeaderCells(headerArgs, columnIndex, columnCount, divWidth)
+            appendDivToLastThreeHeaderCells(headerArgs, columnIndex, divWidth)
 
             headerArgs['translateY'] = translateY
             headerArgs['divWidth'] = divWidth
@@ -441,7 +557,7 @@ function makeDefaultTableHeaders(frame, tournaments, deductions)
             columnIndex = columnIndex + 1
             if deductions[index] then
                 headerArgs = addDeductionArgs(headerArgs, deductions[index]['shortName'])
-                appendDivToLastThreeHeaderCells(headerArgs, columnIndex, columnCount, divWidth)
+                appendDivToLastThreeHeaderCells(headerArgs, columnIndex, divWidth)
                 headerArgs['translateY'] = translateY
                 headerArgs['divWidth'] = divWidth
                 expandedHeaderCell = makeHeaderCell(frame, headerArgs)
@@ -455,7 +571,6 @@ function makeDefaultTableHeaders(frame, tournaments, deductions)
 end
 
 --- Gets the string that goes in the tournament header cell.
--- 
 -- @tparam tournament tournament
 -- @return string title
 function getTournamentHeaderTitle(tournament)
@@ -472,11 +587,10 @@ end
 -- This function modifies the original provided header arguments, use with caution.
 -- @tparam table headerArgs
 -- @tparam number columnIndex
--- @tparam number columnCount
 -- @tparam number divWidth
 -- @return table headerArgs the header arguments after modification according to the given index
-function appendDivToLastThreeHeaderCells(headerArgs, columnIndex, columnCount, divWidth)
-    if columnIndex >= columnCount - 1 then
+function appendDivToLastThreeHeaderCells(headerArgs, columnIndex, divWidth)
+    if columnIndex >= gData['columnCount'] - 1 then
         if headerArgs['morecss'] then
             headerArgs['morecss'] = headerArgs['morecss']..'height:30px; margin-bottom:5px;'
         else
@@ -526,14 +640,17 @@ function getTeamPointsData(team, tournaments, deductions)
 
     while tournaments[tournamentIndex] do
         local tournament = tournaments[tournamentIndex]
-        if tournament['type'] == 'tournament' then
+        if tournament.type == 'tournament' then
             if tournamentQueryResults and tournamentQueryResults[tournamentIndex] then
+
                 local queryResult = tournamentQueryResults[tournamentIndex]
-                local queryPoints = queryResult['prizepoints']
+                local queryPoints = queryResult.prizepoints
+                local queryPlacement = queryResult.placement
+
                 prettyData[columnIndex] = {
                     tournament = tournament,
                     points = queryPoints,
-                    placement = queryResult['placement']
+                    placement = queryPlacement
                 }
             else
                 local tournamentPointsString = getTournamentPointsString(tournament)
@@ -546,17 +663,22 @@ function getTeamPointsData(team, tournaments, deductions)
 
             local manualPoints = getManualPoints(team, columnIndex)
             if manualPoints then
-                prettyData[columnIndex]['points'] = manualPoints
+                prettyData[columnIndex].points = manualPoints
+            end
+
+            if team['hiddenPoints'..tournamentIndex] then
+                prettyData[columnIndex].hiddenPoints = tonumber(team['hiddenPoints'..tournamentIndex])
             end
 
             columnIndex = columnIndex + 1
             -- if the tournament has a deductions column name value provided, then check if the provided team has any deductions from this tournaments' points
             if deductions[tournamentIndex] then
                 local deduction = deductions[tournamentIndex]
-                local deductionPoints = getTeamDeductionPointsByIndex(team, tournamentIndex)
+                local deductionPoints, deductionNote = getTeamDeductionByIndex(team, tournamentIndex)
                 prettyData[columnIndex] = {
                     tournament = deduction,
-                    points = deductionPoints
+                    points = deductionPoints,
+                    deductionNote = deductionNote
                 }
                 columnIndex = columnIndex + 1
             end
@@ -566,26 +688,29 @@ function getTeamPointsData(team, tournaments, deductions)
     end
 
     local totalPoints = 0
+    local totalHiddenPoints = 0
 
-    for columnIndex, val in pairs(prettyData) do
+    for columnIndex, columnTeamData in pairs(prettyData) do
         if type(columnIndex) == 'number' then
-            local tempPoints = tonumber(val.points)
+            local tempPoints = tonumber(columnTeamData.points)
+            local tempHiddenPoints = tonumber(columnTeamData.hiddenPoints)
             if tempPoints ~= nil then
-                if val.tournament.type == 'tournament' then
+                if columnTeamData.tournament.type == 'tournament' then
                     totalPoints = totalPoints + tempPoints
-                elseif val.tournament.type == 'deduction' then
+                elseif columnTeamData.tournament.type == 'deduction' then
                     totalPoints = totalPoints - tempPoints
                 end
             end
-            prettyData['total'..columnIndex] = {
-                points = totalPoints
-            }
+            if tempHiddenPoints ~= nil then
+                totalHiddenPoints = totalHiddenPoints + tempHiddenPoints
+            end
+            prettyData['total'..columnIndex] = totalPoints
+            prettyData['hiddenPoints'..columnIndex] = totalHiddenPoints
         end
     end
     
-    prettyData['total'] = {
-        points = totalPoints
-    }
+    prettyData.total = totalPoints
+    prettyData.hiddenPoints = hiddenPoints
 
     return prettyData
 end
@@ -688,14 +813,18 @@ end
 -- @tparam teamData team
 -- @tparam number tournamentIndex the index of the tournament for which the deductions are returned
 -- @treturn number points the number of deduction points for the team in the tournament
-function getTeamDeductionPointsByIndex(team, tournamentIndex)
+function getTeamDeductionByIndex(team, tournamentIndex)
     local points
+    local note
     if team['deduction'..tournamentIndex] then
         points = team['deduction'..tournamentIndex]
     else
         points = 0
     end
-    return points
+    if team['deduction'..tournamentIndex..'note'] then
+        note = team['deduction'..tournamentIndex..'note']
+    end
+    return points, note
 end
 
 --- Fetches the team name for a specific tournament.
@@ -723,36 +852,53 @@ end
 -- @tparam tournament deductions a table that contains the deduction columns' data
 -- @return node tableWrapper the node of the parent div which wraps the table node, this node contains all the html that renders the table
 function makePointsTable(frame, args, data, tournaments, deductions)
-    local columnCount = countEntries(tournaments) + countEntries(deductions)
-    local tableWrapper = createTableWrapper(columnCount)
-    local htmlTable = createTableTag(tableWrapper)
+    local secondaryWrapper = createTableWrapper()
+    local htmlTable = createTableTag(secondaryWrapper)
 
     local customTableHeader = args['custom-header']
     addTableHeader(frame, htmlTable, customTableHeader, tournaments, deductions)
 
-    renderTableBody(frame, htmlTable, data)
+    -- if gConfig.historical == true then
+    renderTableBodyHistorical(frame, htmlTable, data)
+    -- else
+    --     renderTableBody(frame, htmlTable, data)
+    -- end
 
     htmlTable:done()
-    tableWrapper:done()
-    tableWrapper.parent:done()
-    return tableWrapper.parent
+    secondaryWrapper:done()
+    secondaryWrapper.parent:done()
+    return tostring(secondaryWrapper.parent)
 end
 
 --- Creates the wrapper div which wraps the table node for mobile responsiveness.
--- @tparam number columnCount - the number of tournament columns
 -- @return node div - the secondary wrapper which wraps the table and is wrapped inside the primary wrapper, the primary wrapper is the wrapper which should be returned by the main fucntion
-function createTableWrapper(columnCount)
+function createTableWrapper()
     local tableWidth
     local headerHeight = gConfig['headerHeight']
+    local columnCount = gData['columnCount']
     if gConfig['width'] then
         tableWidth = gConfig['width']
     else
         tableWidth = 312 + 50 * (columnCount) + headerHeight
     end
+
+    if gConfig.historical == true then
+        tableWidth = tableWidth + 50
+    end
+
     local tableWrapper = mw.html.create('div')
+    local currentStageCutoff = gConfig.stages[gConfig.currentStageIndex].cutoff
     tableWrapper
-        :addClass('table-responsive toggle-area toggle-area-3')
-        :attr('data-toggle-area', '3')
+        :addClass('table-responsive toggle-area toggle-area-'..currentStageCutoff)
+        :attr('data-toggle-area', currentStageCutoff)
+        -- :css('position', 'relative')
+        :css('padding-top', '30px')
+    
+    if gConfig.historical == true then
+        preTable = makeHistoricalTabs(frame)
+        tableWrapper:node(preTable)
+    end
+
     secondaryWrapper = tableWrapper:tag('div')
     secondaryWrapper
         :css('width', tableWidth..'px')
@@ -772,6 +918,12 @@ function createTableTag(tableWrapper)
         :css('text-align', 'center')
         :css('margin', '0px')
         :css('width', '0')
+    if (gConfig.historical == false) then
+        htmlTable
+            :addClass('prizepooltable')
+            :addClass('collapsed')
+            :attr('data-cutafter', gConfig['cutafter'])
+    end
     return htmlTable
 end
 
@@ -792,65 +944,92 @@ function addTableHeader(frame, htmlTable, customHeader, tournaments, deductions)
     htmlTable:node(tableHeader)
 end
 
---- Creates the table body and attaches it to the points table.
+--- Creates the dropdown menu which selects a stage of a historical table to show.
 -- @tparam frame frame
--- @tparam node htmlTable
--- @tparam table data
--- @return nil
-function renderTableBody(frame, htmlTable, data)
-    local apparentPosition = 1
-    local actualPosition = 1
-    local previousPoints
-    local previousHiddenPoints
-    if data[1] then
-        previousHiddenPoints = data[1]['team']['hiddenPoints']
-        previousPoints = data[1]['total']['points'] + previousHiddenPoints
+-- @return mw.html dropdownWrapper the main div which contains the buttons
+function makeHistoricalTabs(frame)
+    local dropdownWrapper = mw.html.create('div')
+    dropdownWrapper
+        :addClass('dropdown-box-wrapper')
+        -- :css('position', 'absolute')
+        :css('float', 'left')
+        :css('top', '-30px')
+    
+    local dropdown = dropdownWrapper:tag('div')
+    dropdown
+        :addClass('dropdown-box')
+        :css('padding', '0px')
+        :css('margin-top', '31px')
+    
+    for _, stage in pairs(gConfig.stages) do
+        makeStageDiv(dropdown, stage)
     end
-    local rowCounter = 0
-    local currentPoints
-    local currentHiddenPoints
+    dropdown:done()
 
-    for key, stage in pairs(gConfig.stages) do
+    local currentStage = gConfig.stages[gConfig.currentStageIndex]
+    local currentStageSpan = dropdownWrapper:tag('span')
+    currentStageSpan
+        :addClass('dropdown-box-button')
+        :addClass('btn')
+        :addClass('btn-primary')
+        :css('width', gConfig.stageBtnWidth..'px')
+        :css('padding-top', '2px')
+        :css('padding-bottom', '2px')
+        :css('position', 'absolute')
+        :css('left', '0px')
+        :wikitext(currentStage.name..' <span class="caret"></span>')
+        :done()
+    
+    dropdownWrapper:done()
+    return dropdownWrapper
+end
+
+--- Creates a single dropdown menu item representing a single stage.
+-- @tparam mw.html dropdown the dropdown div to add the item to
+-- @tparam stage stage
+-- @return nil
+function makeStageDiv(dropdown, stage)
+    local stageDiv = dropdown:tag('div')
+    stageDiv
+        :addClass('toggle-area-button')
+        :addClass('btn')
+        :addClass('btn-primary')
+        :attr('data-toggle-area-btn', stage.cutoff)
+        :css('width', gConfig.stageBtnWidth..'px')
+        :css('padding-top', '2px')
+        :css('padding-bottom', '2px')
+        :wikitext(stage.name)
+        :done()
+end
+
+--- Creates the table body in case of a historical table.
+-- @tparam frame frame
+-- @tparam mw.html htmlTable
+-- @tparam {{cellTeamData,...},...} data the data table that contains the teams' data
+function renderTableBodyHistorical(frame, htmlTable, data)
+
+    for _, stage in pairs(gConfig.stages) do
+        local name = stage.name
         local cutoff = stage.cutoff
         sortPartial(data, cutoff)
+        local rowCounter = 1
+        for _, dataRow in pairs(data) do
 
-        for index, dataRow in pairs(data) do
+            dataRow.total = dataRow['total'..cutoff]
+            dataRow.position = dataRow['position'..cutoff]
 
-            -- currentHiddenPoints = dataRow['team']['hiddenPoints']
-            currentHiddenPoints = 0
-            currentPoints = dataRow['total']['points'] + currentHiddenPoints
-            
-            if currentPoints < previousPoints then
-                apparentPosition = actualPosition
-            else
-                if gConfig['unique'] == true then
-                    apparentPosition = actualPosition
+            if gConfig['limit'] then
+                local limit = gConfig['limit']
+                if rowCounter > limit then
+                    break
+                else
+                    rowCounter = rowCounter + 1
                 end
             end
-            previousPoints = currentPoints
-    
-            dataRow['position'] = {
-                position = apparentPosition
-            }
     
             local tableRow = renderRow(frame, dataRow, cutoff)
             htmlTable:node(tableRow)
-            rowCounter = rowCounter + 1
-            if gConfig['limit'] then
-                local limit = gConfig['limit']
-                if rowCounter >= limit then
-                    return
-                end
-            end
-            actualPosition = actualPosition + 1
         end
-
-        currentHiddenPoints = 0
-        currentPoints = 0
-        previousPoints = 0
-        previousHiddenPoints = 0
-        apparentPosition = 1
-        actualPosition = 1
     end
 end
 
@@ -862,13 +1041,13 @@ end
 function styleItem(item, args, c)
     if args == nil then return item end
 
-    if args['bg'] then
-        item:css('background-color', args['bg'])
+    if args.bg then
+        item:css('background-color', args.bg)
     end
-    if args['fg'] then
-        item:css('color', args['fg'])
+    if args.fg then
+        item:css('color', args.fg)
     end
-    if args['bold'] then
+    if args.bold then
         item:css('font-weight', 'bold')
     end
 
@@ -888,41 +1067,57 @@ end
 --- Renders an html row from row arguments.
 -- @tparam frame frame
 -- @tparam cellTeamData rowArgs
+-- @tparam number cutoff the cutoff of the stage at which this cell is rendered
 -- @return mw.html tr - table row represented by an mw.html object
-function renderRow(frame, rowArgs, stageIndex)
-    local teamName = rowArgs['team']['name']
+function renderRow(frame, rowArgs, cutoff)
+
+    local teamName = rowArgs.team.name
 
     local row = mw.html.create('tr')
-    row:attr('data-toggle-area-content', stageIndex)
 
-    makePositionCell(row, rowArgs)
+    if gConfig.historical == true then
+        row:attr('data-toggle-area-content', cutoff)
+    end
 
-    makeTeamCell(frame, row, rowArgs)
+    local cellIndex = 1
 
-    makeTotalPointsCell(row, rowArgs)
+    makePositionCell(row, rowArgs, cutoff)
+    cellIndex = cellIndex + 1
+    if gConfig.historical == true then
+        makeTrendCell(row, rowArgs, cellIndex)
+        cellIndex = cellIndex + 1
+    end
+    makeTeamCell(frame, row, rowArgs, cellIndex)
+    cellIndex = cellIndex + 1
+    makeTotalPointsCell(row, rowArgs, cellIndex)
+    cellIndex = cellIndex + 1
 
-    if gConfig['minified'] == true then
+    if gConfig.minified == true then
         row:done()
         return row
     end
     -- the rest of the cells
-    local c = 4
+    local tournamentCounter = 1
     for _, cell in pairs(rowArgs) do
         if type(cell) == 'table' then
-            if cell['tournament'] then
-                if cell['tournament']['type'] == 'tournament' then
-                    if cell['points'] then
-                        makeTournamentPointsCell(row, rowArgs, cell, c)
-                        c = c + 1
+            if cell.tournament then
+                if gConfig.historical == true and tournamentCounter > cutoff then
+                    makeEmptyTournamentPointsCell(row, rowArgs, cellIndex)
+                    cellIndex = cellIndex + 1
+                elseif cell.tournament.type == 'tournament' then
+                    if cell.points then
+                        makeTournamentPointsCell(frame, row, rowArgs, cell, cellIndex)
+                        cellIndex = cellIndex + 1
                     end
-                elseif cell['tournament']['type'] == 'deduction' then
-                    if cell['points'] then
-                        makeDeductionPointsCell(frame, row, rowArgs, cell, c)
-                        c = c + 1
+                elseif cell.tournament.type == 'deduction' then
+                    if cell.points then
+                        makeDeductionPointsCell(frame, row, rowArgs, cell, cellIndex)
+                        cellIndex = cellIndex + 1
                     end
                 end
             end
         end
+        tournamentCounter = tournamentCounter + 1
     end
     row:done()
     return row
@@ -931,18 +1126,21 @@ end
 --- Creates the cell which shows the position of the team.
 -- @tparam node row the mw.html row node to add the cell to
 -- @tparam {cellTeamData,...} rowArgs
+-- @tparam number cutoff the cutoff of the stage at which this cell is rendered
 -- @return nil
-function makePositionCell(row, rowArgs)
+function makePositionCell(row, rowArgs, cutoff)
     local td = row:tag('td')
     td
         :css('font-weight', 'bold')
-    if gConfig['started'] == true then
-        td:wikitext(rowArgs['position']['position']..'.')
+    if gConfig.started == true then
+        td:wikitext(rowArgs.position.position..'.')
     else
         td:wikitext('.')
     end
     
-    styleItem(td, rowArgs['cssArgs'], 1)
+    cssArgs = rowArgs.cssArgs[cutoff]
+
+    styleItem(td, cssArgs, 1)
         :done()
 end
 
@@ -950,8 +1148,9 @@ end
 -- @tparam frame frame
 -- @tparam node row the mw.html row node to add the cell to
 -- @tparam {cellTeamData,...} rowArgs
+-- @tparam number cellIndex the cell's index
 -- @return nil
-function makeTeamCell(frame, row, rowArgs)
+function makeTeamCell(frame, row, rowArgs, cellIndex)
     local td = row:tag('td')
     local expandedTeam
     local display
@@ -972,36 +1171,70 @@ function makeTeamCell(frame, row, rowArgs)
     td
         :css('text-align', 'left')
         :wikitext(expandedTeam)
-    styleItem(td, rowArgs['cssArgs'], 2)
+    styleItem(td, rowArgs['cssArgs'], cellIndex)
         :done()
 end
 
 --- Creates the cell which shows the total number of points of the team.
 -- @tparam node row the mw.html row node to add the cell to
 -- @tparam {cellTeamData,...} rowArgs
+-- @tparam number cellIndex the cell's index
 -- @return nil
-function makeTotalPointsCell(row, rowArgs)
+function makeTotalPointsCell(row, rowArgs, cellIndex)
     local td = row:tag('td')
     td
         :css('font-weight', 'bold')
-    if gConfig['started'] == true then
-        td:wikitext(rowArgs['total']['points'])
+    if gConfig.started == true then
+        td:wikitext(rowArgs.total)
     end
 
-    styleItem(td, rowArgs['cssArgs'], 3)
+    styleItem(td, rowArgs['cssArgs'], cellIndex)
+        :done()
+end
+
+-- @tparam number cellIndex the cell's index
+function makeTrendCell(row, rowArgs, cellIndex)
+    local td = row:tag('td')
+    td
+        :css('font-weight', 'bold')
+    if gConfig.started == true then
+        td:wikitext(rowArgs.position.trend)
+    end
+
+    styleItem(td, rowArgs.cssArgs, cellIndex)
         :done()
 end
 
 --- Creates the cell which shows the number of points of the team for a single tournament.
+-- @tparam frame frame
 -- @tparam node row the mw.html row node to add the cell to
 -- @tparam {cellTeamData,...} rowArgs
 -- @tparam cellTeamData cell
+-- @tparam number cellIndex the cell's index
+-- @return nil
+function makeTournamentPointsCell(frame, row, rowArgs, cell, cellIndex)
+    local td = row:tag('td')
+    td:wikitext(cell.points)
+    styleItem(td, rowArgs.cssArgs, cellIndex)
+    -- if cell.placement then
+    --     local placement = tonumber(split(cell.placement,'-')[1])
+    --     if placement < 5 then
+    --         local colorCode = protectedExpansion(frame, 'Color', {placement})
+    --         td:css('background-color', colorCode)
+    --     end
+    -- end
+    td:done()
+end
+
+--- Creates an empty cell.
+-- @tparam node row the mw.html row node to add the cell to
+-- @tparam {cellTeamData,...} rowArgs
 -- @tparam number c the index of the column counting from the position cell as 1
 -- @return nil
-function makeTournamentPointsCell(row, rowArgs, cell, c)
+function makeEmptyTournamentPointsCell(row, rowArgs, c)
     local td = row:tag('td')
-    td:wikitext(cell['points'])
-    styleItem(td, rowArgs['cssArgs'], c):done()
+    td:wikitext('')
+    styleItem(td, rowArgs.cssArgs, c):done()
 end
 
 --- Creates the cell which shows the number of points deducted from an team for a single column.
@@ -1016,11 +1249,17 @@ function makeDeductionPointsCell(frame, row, rowArgs, cell, c)
     local teamName = rowArgs['team']['name']
     td:css('padding', '3px')
     local label
-    if cell['points'] > 0 then
+    if cell.points > 0 then
+        local deductionPopupContent
+        if cell.deductionNote then
+            deductionPopupContent = cell.deductionNote
+        else
+            deductionPopupContent = frame:preprocess('{{#lst:{{FULLPAGENAME}}|'..teamName..'-c'..c..'}}')
+        end
         label = protectedExpansion(frame, 'Popup', {
-            label = -cell['points'],
-            title = 'Point Deductions ('..cell['tournament']['tournamentName']..')',
-            content = frame:preprocess('{{#lst:{{FULLPAGENAME}}|'..teamName..'-c'..c..'}}')
+            label = -cell.points,
+            title = 'Point Deductions ('..cell.tournament.tournamentName..')',
+            content = deductionPopupContent
         })
     else
         label = ''
