@@ -1,5 +1,5 @@
 ---- This Module creates a table that shows the points of teams in a point system tournament (using subobjects defined in prizepool templates), this was mainly created for the new Circuit System starting RLCS Season X.
----- Revision 1.21
+---- Revision 1.2
 ----
 ---- Team Names are case sensitive
 ----
@@ -388,9 +388,6 @@ function fetchTeamData(args)
                 if args[teamName..'deduction'..j] then
                     local deduction = tonumber(args[teamName..'deduction'..j])
                     tempTeam['deduction'..j] = deduction
-                    if args[teamName..'deduction'..j..'note'] then
-                        tempTeam['deduction'..j..'note'] = args[teamName..'deduction'..j..'note']
-                    end
                 end
 
                 if args[teamName..'points'..j] then
@@ -674,13 +671,10 @@ function getTeamPointsData(team, tournaments, deductions)
             -- if the tournament has a deductions column name value provided, then check if the provided team has any deductions from this tournaments' points
             if deductions[tournamentIndex] then
                 local deduction = deductions[tournamentIndex]
-                local deductionData = getTeamDeductionByIndex(team, tournamentIndex)
-                local deductionPoints = deductionData.points
-                local deductionNote = deductionData.note
+                local deductionData = getTeamDeductionDataByIndex(team, tournamentIndex)
                 prettyData[columnIndex] = {
                     tournament = deduction,
-                    deductionPoints = deductionPoints,
-                    deductionNote = deductionNote
+                    points = deductionData.points
                 }
                 columnIndex = columnIndex + 1
             end
@@ -815,20 +809,15 @@ end
 -- @tparam teamData team
 -- @tparam number tournamentIndex the index of the tournament for which the deductions are returned
 -- @treturn @{deductionData} deduction data for the team in the tournament
-function getTeamDeductionByIndex(team, tournamentIndex)
+function getTeamDeductionDataByIndex(team, tournamentIndex)
     local points
-    local note
     if team['deduction'..tournamentIndex] then
         points = team['deduction'..tournamentIndex]
     else
         points = 0
     end
-    if team['deduction'..tournamentIndex..'note'] then
-        note = team['deduction'..tournamentIndex..'note']
-    end
     return {
-        points = points,
-        note = note
+        points = points
     }
 end
 
@@ -1255,16 +1244,10 @@ function makeDeductionPointsCell(frame, row, rowArgs, cell, c)
     td:css('padding', '3px')
     local label
     if cell.points > 0 then
-        local deductionPopupContent
-        if cell.deductionNote then
-            deductionPopupContent = cell.deductionNote
-        else
-            deductionPopupContent = frame:preprocess('{{#lst:{{FULLPAGENAME}}|'..teamName..'-c'..c..'}}')
-        end
         label = protectedExpansion(frame, 'Popup', {
             label = -cell.points,
-            title = 'Point Deductions ('..cell.tournament.tournamentName..')',
-            content = deductionPopupContent
+            title = 'Point Deductions ('..cell['tournament']['tournamentName']..')',
+            content = frame:preprocess('{{#lst:{{FULLPAGENAME}}|'..teamName..'-c'..c..'}}')
         })
     else
         label = ''
@@ -1364,5 +1347,4 @@ return p
 
 --- a table that contains the deduction data of a team in a tournament.
 -- @tfield number points the number of deduction points for the team in the tournament.
--- @tfield ?|nil|string note the deduction note for the team in the tournament.
 -- @table deductionData
