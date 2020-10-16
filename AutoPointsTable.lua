@@ -161,10 +161,21 @@ function getTeamPointsDataFromLPDB(team, tournaments, deductions, queryResults)
                     columnIndex = columnIndex + 1
                 end
             else
+                local pointsString
+                if tournament.finished == true then
+                    pointsString = '-'
+                else
+                    pointsString = ''
+                end
                 prettyData[columnIndex] = {
                     tournament = tournament,
-                    points = ''
+                    points = pointsString
                 }
+
+                local manualPoints = getManualPoints(team, columnIndex)
+                if manualPoints then
+                    prettyData[columnIndex].points = manualPoints
+                end
 
                 columnIndex = columnIndex + 1
             end
@@ -208,7 +219,7 @@ end
 function createLPDBObjects(frame, tableData)
     local objectCount = 0
     for _, dataRow in pairs(tableData) do
-        local uid = uuid()
+        local uid = dataRow.team.name..'_'..gConfig.lpdbname
         local type = gConfig.lpdbname
         local name = dataRow.team.name
         local position
@@ -217,19 +228,21 @@ function createLPDBObjects(frame, tableData)
         else
             position = -1
         end
-        local points = dataRow.points
-        local extradata = mw.ext.LiquipediaDB.lpdb_create_json({
-            totalpoints = dataRow.total
-        })
-        local objectdata = {
-            type = type,
-            name = name,
-            information = position,
-            date = os.date(),
-            extradata = extradata
-        }
-        mw.ext.LiquipediaDB.lpdb_datapoint(uid, objectdata)
-        objectCount = objectCount + 1
+        local totalpoints = dataRow.total
+        if totalpoints > 0 then
+            local extradata = mw.ext.LiquipediaDB.lpdb_create_json({
+                totalpoints = totalpoints
+            })
+            local objectdata = {
+                type = type,
+                name = string.lower(name),
+                information = position,
+                date = os.date(),
+                extradata = extradata
+            }
+            mw.ext.LiquipediaDB.lpdb_datapoint(uid, objectdata)
+            objectCount = objectCount + 1
+        end
     end
     return objectCount
 end
@@ -428,7 +441,7 @@ function setGlobalConfig(args)
     else
         gConfig.stageBtnWidth = '90'
     end
-    if args['ranking-name'] then
+    if args['ranking-name'] and (args['lpdbmute'] ~= 'true') then
         gConfig.lpdbname = args['ranking-name']
     end
 end
