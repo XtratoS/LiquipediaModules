@@ -1,5 +1,5 @@
 ---- This Module creates a table that shows the points of teams in a point system tournament (using subobjects defined in prizepool templates), this was mainly created for the new Circuit System starting RLCS Season X.
----- Revision 1.2
+---- Revision 1.3
 ----
 ---- Team Names are case sensitive
 ----
