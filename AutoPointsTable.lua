@@ -20,7 +20,7 @@ local getArgs = require('Module:Arguments').getArgs
 local tprint = require('Module:TablePrinter').tprint
 local inspect = require('Module:Sandbox/inspect').inspect
 
-local SIN_45_DEG = math.floor(math.sin(math.rad(45))*100) / 100
+local SIN_45_DEG = 1 / math.sqrt(2)
 local gConfig = {}
 local gData = {}
 
@@ -51,9 +51,12 @@ function p.main(frame)
 
     local teams = fetchTeamData(args)
 
+    local queryResults = queryLPDBPlacements(tournaments)
+
     local tableData = {}
     for i, team in pairs(teams) do
-        local teamPointsData = getTeamPointsData(team, tournaments, deductions)
+        -- local teamPointsData = getTeamPointsData(team, tournaments, deductions)
+        local teamPointsData = getTeamPointsDataFromLPDB(team, tournaments, deductions, queryResults)
         tableData[i] = teamPointsData
     end
     
@@ -64,10 +67,182 @@ function p.main(frame)
 
     local pointsTable = makePointsTable(frame, args, tableData, tournaments, deductions)
 
+    math.randomseed(os.time())
+    if gConfig.lpdbname then
+        createLPDBObjects(frame, tableData)
+    end
+
+    -- mw.log(inspect(tableData))
+
     return tostring(pointsTable)
     -- '<br><pre>'..inspect(tableData)..'</pre>'
     -- return tprint(args)..'\n\n\n\n'..tprint(tableData)
 
+end
+
+--- Performs required LPDB queries to get the placements of all teams in a tournament
+-- tparam @{tournament,...} tournament the tournaments to query for
+-- @treturn @{LPDBQueryResult,...} queryResults the results of all performed queries
+function queryLPDBPlacements(tournaments)
+    local out = {}
+    local queryParams = {
+        limit = 5000,
+        query = 'tournament, participant, placement, date, extradata'
+    }
+    for tournamentIndex, tournament in pairs(tournaments) do
+        queryParams.conditions = '[[tournament::'..tournament.fullName..']]'
+        local results = mw.ext.LiquipediaDB.lpdb('placement', queryParams)
+        for _, result in pairs(results) do
+            result.points = result.extradata.prizepoints
+            result.extradata = nil
+            local teamName = result.participant
+            if not out[tournamentIndex] then
+                out[tournamentIndex] = {}
+            end
+            out[tournamentIndex][teamName] = result
+        end
+    end
+    return out
+end
+
+--- Fetches the points of a team for the given tournaments.
+-- @tparam teamData team
+-- @tparam {tournament,...} tournaments
+-- @tparam {tournament,...} deductions
+-- @tparam @{LPDBQueryResult,...} queryResults the results of all performed queries
+-- @treturn @{teamPoints} teamPoints the points data of a team
+function getTeamPointsDataFromLPDB(team, tournaments, deductions, queryResults)
+    local prettyData = {
+        team = team
+    }
+    local tournamentIndex = 1
+
+    local columnIndex = 1
+
+    while tournaments[tournamentIndex] do
+        local tournament = tournaments[tournamentIndex]
+        if (tournament.type == 'tournament') then
+            if queryResults and queryResults[tournamentIndex] then
+                local queryResult = queryResults[tournamentIndex]
+                local teamName = getTournamentTeamName(team, tournamentIndex)
+                if queryResult[teamName] then
+                    local teamResult = queryResult[teamName]
+                    prettyData[columnIndex] = {
+                        tournament = tournament,
+                        points = teamResult.points,
+                        placement = teamResult.placement
+                    }
+                else
+                    prettyData[columnIndex] = {
+                        tournament = tournament,
+                        points = '-',
+                        placement = '-'
+                    }
+                end
+
+                local manualPoints = getManualPoints(team, columnIndex)
+                if manualPoints then
+                    prettyData[columnIndex].points = manualPoints
+                end
+
+                if team['hiddenPoints'..tournamentIndex] then
+                    prettyData[columnIndex].hiddenPoints = tonumber(team['hiddenPoints'..tournamentIndex])
+                end
+
+                columnIndex = columnIndex + 1
+
+                if deductions[tournamentIndex] then
+                    local deduction = deductions[tournamentIndex]
+                    local deductionData = getTeamDeductionDataByIndex(team, tournamentIndex)
+                    prettyData[columnIndex] = {
+                        tournament = deduction,
+                        points = deductionData.points
+                    }
+                    columnIndex = columnIndex + 1
+                end
+            else
+                prettyData[columnIndex] = {
+                    tournament = tournament,
+                    points = ''
+                }
+
+                columnIndex = columnIndex + 1
+            end
+        end
+        tournamentIndex = tournamentIndex + 1
+    end
+
+    local totalPoints = 0
+    local totalHiddenPoints = 0
+
+    for columnIndex, columnTeamData in pairs(prettyData) do
+        if type(columnIndex) == 'number' then
+            local tempPoints = tonumber(columnTeamData.points)
+            local tempHiddenPoints = tonumber(columnTeamData.hiddenPoints)
+            if tempPoints ~= nil then
+                if columnTeamData.tournament.type == 'tournament' then
+                    totalPoints = totalPoints + tempPoints
+                elseif columnTeamData.tournament.type == 'deduction' then
+                    totalPoints = totalPoints - tempPoints
+                end
+            end
+            if tempHiddenPoints ~= nil then
+                totalHiddenPoints = totalHiddenPoints + tempHiddenPoints
+            end
+            prettyData['total'..columnIndex] = totalPoints
+            prettyData['hiddenPoints'..columnIndex] = totalHiddenPoints
+        end
+    end
+    
+    prettyData.total = totalPoints
+    prettyData.hiddenPoints = hiddenPoints
+
+    return prettyData
+end
+
+--- Creates the Ranking LDPB objects
+--- https://liquipedia.net/commons/Help:LiquipediaDB
+-- @tparam fram frame
+-- @tparam @tparam {{cellTeamData,...},...} data the data table that contains the teams' data
+-- @treturn number count the number of objects created
+function createLPDBObjects(frame, tableData)
+    local objectCount = 0
+    for _, dataRow in pairs(tableData) do
+        local uid = uuid()
+        local type = gConfig.lpdbname
+        local name = dataRow.team.name
+        local position
+        if dataRow.position then
+            position = dataRow.position.position
+        else
+            position = -1
+        end
+        local points = dataRow.points
+        local extradata = mw.ext.LiquipediaDB.lpdb_create_json({
+            totalpoints = dataRow.total
+        })
+        local objectdata = {
+            type = type,
+            name = name,
+            information = position,
+            date = os.date(),
+            extradata = extradata
+        }
+        mw.ext.LiquipediaDB.lpdb_datapoint(uid, objectdata)
+        objectCount = objectCount + 1
+    end
+    return objectCount
+end
+
+--- Randomly generates an 8 character unique id
+--- https://gist.github.com/jrus/3197011
+-- @treturn string uid
+function uuid()
+    local template ='xxxxxxxx'
+    return string.gsub(template, '[xy]', function (c)
+        local v = (c == 'x') and math.random(0, 0xf) or math.random(8, 0xb)
+        return string.format('%x', v)
+    end)
 end
 
 --- Adds the default stage if there are no stages provided in the template arguments
@@ -252,6 +427,9 @@ function setGlobalConfig(args)
         gConfig.stageBtnWidth = args['stage-btn-width']
     else
         gConfig.stageBtnWidth = '90'
+    end
+    if args['ranking-name'] then
+        gConfig.lpdbname = args['ranking-name']
     end
 end
 
@@ -852,11 +1030,7 @@ function makePointsTable(frame, args, data, tournaments, deductions)
     local customTableHeader = args['custom-header']
     addTableHeader(frame, htmlTable, customTableHeader, tournaments, deductions)
 
-    -- if gConfig.historical == true then
-    renderTableBodyHistorical(frame, htmlTable, data)
-    -- else
-    --     renderTableBody(frame, htmlTable, data)
-    -- end
+    renderTableBody(frame, htmlTable, data)
 
     htmlTable:done()
     secondaryWrapper:done()
@@ -996,11 +1170,11 @@ function makeStageDiv(dropdown, stage)
         :done()
 end
 
---- Creates the table body in case of a historical table.
+--- Creates the table body.
 -- @tparam frame frame
 -- @tparam mw.html htmlTable
 -- @tparam {{cellTeamData,...},...} data the data table that contains the teams' data
-function renderTableBodyHistorical(frame, htmlTable, data)
+function renderTableBody(frame, htmlTable, data)
 
     for _, stage in pairs(gConfig.stages) do
         local name = stage.name
