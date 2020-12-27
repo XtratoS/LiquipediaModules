@@ -15,7 +15,7 @@ function p.main(frame)
     conditionString = conditionString:sub(1, -3)..')'
     local data = mw.ext.LiquipediaDB.lpdb('match', {
         conditions = conditionString,
-        query = 'date, opponent1, opponent2, opponent1score, opponent2score, winner, pagename',
+        query = 'date, opponent1, opponent2, opponent1score, opponent2score, winner, pagename, resulttype',
         order = 'date asc'
     })
 
@@ -23,13 +23,24 @@ function p.main(frame)
         if match.opponent2 == team then
             match.opponent1, match.opponent2 = match.opponent2, match.opponent1
             match.opponent1score, match.opponent2score = match.opponent2score, match.opponent1score
-            match.winner = 2
-        end
-        if match.opponent1score == match.opponent2score then
-            if match.winner == 1 then
-                match.opponent1score, match.opponent2score = 'W', 'L'
+            if match.winner == 1 or match.winner == '1' then
+                match.winner = 2
             else
-                match.opponent1score, match.opponent2score = 'L', 'W'
+                match.winner = 1
+            end
+        end
+
+        if match.opponent1score > match.opponent2score then
+            match.winner = 1
+        elseif match.opponent1score < match.opponent2score then
+            match.winner = 2
+        else
+            local loserString = match.resulttype == 'ff' and 'FF' or 'L'
+            local winnerString = 'W'
+            if match.winner == 1 or match.winner == '1' then
+                match.opponent1score, match.opponent2score = winnerString, loserString
+            else
+                match.opponent1score, match.opponent2score = loserString, winnerString
             end
         end
     end
