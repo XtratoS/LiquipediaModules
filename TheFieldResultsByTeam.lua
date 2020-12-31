@@ -8,7 +8,9 @@ function p.main(frame)
     local args = getArgs(frame)
     local tournaments = parseTournaments(args)
     local team = args.team
-    local conditionString = '([[opponent1::'..team..']]OR[[opponent2::'..team..']])AND('
+    local aliases = getAliases(args)
+    local aliasesConditionString = getAliasesConditionString(aliases)
+    local conditionString = '(' .. aliasesConditionString .. '[[opponent1::' .. team .. ']]OR[[opponent2::' .. team .. ']])AND('
     for _, tournament in pairs(tournaments) do
         conditionString = conditionString .. '[[pagename::' .. tournament.link .. ']]OR'
     end
@@ -20,7 +22,7 @@ function p.main(frame)
     })
 
     for _, match in pairs(data) do
-        if match.opponent2 == team then
+        if ((match.opponent2 == team) or (includes(aliases, match.opponent2))) then
             match.opponent1, match.opponent2 = match.opponent2, match.opponent1
             match.opponent1score, match.opponent2score = match.opponent2score, match.opponent1score
             if match.winner == 1 or match.winner == '1' then
@@ -45,6 +47,33 @@ function p.main(frame)
         end
     end
     return pretty(frame, args, data, tournaments)
+end
+
+function getAliases(args)
+    local aliases = {}
+    local i = 1
+    while (args['alias'..i]) do
+        table.insert(aliases, args['alias'..i])
+        i = i + 1
+    end
+    return aliases
+end
+
+function includes(tbl, val)
+    for tblKey, tblVal in pairs(tbl) do
+        if (tblVal == val) then
+            return true
+        end
+    end
+    return false
+end
+
+function getAliasesConditionString(aliases)
+    local out = ''
+    for _, alias in pairs(aliases) do
+        out = out .. '[[opponent1::'..alias..']]OR[[opponent2::'..alias..']]OR'
+    end
+    return out
 end
 
 function pretty(frame, args, data, tournaments)
