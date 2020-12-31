@@ -133,10 +133,14 @@ function getTeamPointsDataFromLPDB(team, tournaments, deductions, queryResults)
                         placement = teamResult.placement
                     }
                 else
+                    local pointsString = ''
+                    if (tournament.finished == true) then
+                        pointsString = '-'
+                    end
                     prettyData[columnIndex] = {
                         tournament = tournament,
-                        points = '-',
-                        placement = '-'
+                        points = pointsString,
+                        placement = ''
                     }
                 end
 
@@ -477,6 +481,8 @@ end
 function sortPartial(data, index)
     table.sort(data,
         function (a, b)
+            local qualA = a['q'..index]
+            local qualB = b['q'..index]
             local totalPointsA = a['total'..index]
             local totalPointsB = b['total'..index]
             local hiddenPointsA = a['hiddenPoints'..index]
@@ -484,14 +490,22 @@ function sortPartial(data, index)
             local nameA = a.team.name
             local nameB = b.team.name
 
-            if totalPointsA == totalPointsB then
-                if hiddenPointsA == hiddenPointsB then
+            if qualA == true then
+                if qualB == true then
                     return nameA < nameB
                 else
-                    return hiddenPointsA > hiddenPointsB
+                    return true
                 end
             else
-                return totalPointsA > totalPointsB
+                if totalPointsA == totalPointsB then
+                    if hiddenPointsA == hiddenPointsB then
+                        return nameA < nameB
+                    else
+                        return hiddenPointsA > hiddenPointsB
+                    end
+                else
+                    return totalPointsA > totalPointsB
+                end
             end
         end
     )
@@ -589,6 +603,16 @@ function fetchTeamData(args)
                 if args[teamName..'hiddenpoints'..j] then
                     local points = tonumber(args[teamName..'hiddenpoints'..j])
                     tempTeam['hiddenPoints'..j] = points
+                end
+
+                if args[teamName..'q'..j] then
+                    local autoqual
+                    if (args[teamName..'q'..j] == 'true') then
+                        autoqual = true
+                    else
+                        autoqual = false
+                    end
+                    tempTeam['q'..j] = autoqual
                 end
 
             end
@@ -897,7 +921,7 @@ function getTeamPointsData(team, tournaments, deductions)
     end
     
     prettyData.total = totalPoints
-    prettyData.hiddenPoints = hiddenPoints
+    prettyData.hiddenPoints = totalHiddenPoints
 
     return prettyData
 end
