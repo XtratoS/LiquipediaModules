@@ -1,5 +1,5 @@
 ---- This Module creates a table that shows the points of teams in a point system tournament (using subobjects defined in prizepool templates), this was mainly created for the new Circuit System starting RLCS Season X.
----- Revision 1.3
+---- Revision 1.3.1
 ----
 ---- Team Names are case sensitive
 ----
@@ -75,7 +75,7 @@ function p.main(frame)
     -- mw.log(inspect(tableData))
 
     return tostring(pointsTable)
-    -- '<br><pre>'..inspect(tableData)..'</pre>'
+    .. '<br><pre>'..inspect(tableData)..'</pre>'
     -- return tprint(args)..'\n\n\n\n'..tprint(tableData)
 
 end
@@ -153,6 +153,10 @@ function getTeamPointsDataFromLPDB(team, tournaments, deductions, queryResults)
                     prettyData[columnIndex].hiddenPoints = tonumber(team['hiddenPoints'..tournamentIndex])
                 end
 
+                if (team.q == tournamentIndex) and (gConfig.autoqual == true) then
+                    prettyData[columnIndex].points = 'Q'
+                end
+
                 columnIndex = columnIndex + 1
 
                 if deductions[tournamentIndex] then
@@ -204,11 +208,16 @@ function getTeamPointsDataFromLPDB(team, tournaments, deductions, queryResults)
             if tempHiddenPoints ~= nil then
                 totalHiddenPoints = totalHiddenPoints + tempHiddenPoints
             end
-            prettyData['total'..columnIndex] = totalPoints
-            prettyData['hiddenPoints'..columnIndex] = totalHiddenPoints
+            if team.q and (gConfig.autoqual == true) then
+                prettyData['total'..columnIndex] = 'q'
+                prettyData['hiddenPoints'..columnIndex] = -team.q
+            else
+                prettyData['total'..columnIndex] = totalPoints
+                prettyData['hiddenPoints'..columnIndex] = totalHiddenPoints
+            end
         end
     end
-    
+
     prettyData.total = totalPoints
     prettyData.hiddenPoints = hiddenPoints
 
@@ -294,12 +303,17 @@ function addHistoricalPositionDataToTableData(args, data)
         local rowCounter = 1
         for _, dataRow in pairs(data) do
             
-            currentPoints = dataRow['total'..cutoff]
+            local currentPoints
+            if (dataRow['total'..cutoff] == 'q') and (gConfig.autoqual == true) then
+                currentPoints = 2147483000
+            else
+                currentPoints = dataRow['total'..cutoff]
+            end
             
             if currentPoints < previousPoints then
                 apparentPosition = actualPosition
             else
-                if gConfig.unique == true then
+                if (gConfig.unique == true) or (gConfig.autoqual == true and currentPoints == 2147483000) then
                     apparentPosition = actualPosition
                 end
             end
@@ -395,7 +409,8 @@ function setGlobalConfig(args)
         'bg>pbg',
         'minified',
         'unique',
-        'historical'
+        'historical',
+        'autoqual'
     }) do
         if args[configProp] == 'true' then
             gConfig[configProp] = true
@@ -470,6 +485,11 @@ function sortData(a, b)
             return hiddenPointsA > hiddenPointsB
         end
     else
+        if totalPointsA == 'q' then
+            return true
+        elseif totalPointsB == 'q' then
+            return false
+        end
         return totalPointsA > totalPointsB
     end
 end
@@ -481,8 +501,6 @@ end
 function sortPartial(data, index)
     table.sort(data,
         function (a, b)
-            local qualA = a['q'..index]
-            local qualB = b['q'..index]
             local totalPointsA = a['total'..index]
             local totalPointsB = b['total'..index]
             local hiddenPointsA = a['hiddenPoints'..index]
@@ -490,22 +508,19 @@ function sortPartial(data, index)
             local nameA = a.team.name
             local nameB = b.team.name
 
-            if qualA == true then
-                if qualB == true then
+            if totalPointsA == totalPointsB then
+                if hiddenPointsA == hiddenPointsB then
                     return nameA < nameB
                 else
-                    return true
+                    return hiddenPointsA > hiddenPointsB
                 end
             else
-                if totalPointsA == totalPointsB then
-                    if hiddenPointsA == hiddenPointsB then
-                        return nameA < nameB
-                    else
-                        return hiddenPointsA > hiddenPointsB
-                    end
-                else
-                    return totalPointsA > totalPointsB
+                if totalPointsA == 'q' then
+                    return true
+                elseif totalPointsB == 'q' then
+                    return false
                 end
+                return totalPointsA > totalPointsB
             end
         end
     )
@@ -606,13 +621,7 @@ function fetchTeamData(args)
                 end
 
                 if args[teamName..'q'..j] then
-                    local autoqual
-                    if (args[teamName..'q'..j] == 'true') then
-                        autoqual = true
-                    else
-                        autoqual = false
-                    end
-                    tempTeam['q'..j] = autoqual
+                    tempTeam.q = j
                 end
 
             end
@@ -1390,7 +1399,7 @@ function makeTotalPointsCell(row, rowArgs, cellIndex)
     td
         :css('font-weight', 'bold')
     if gConfig.started == true then
-        td:wikitext(rowArgs.total)
+        td:wikitext(rowArgs.total == 'q' and "[[File:GreenCheck.png]] '''Q'''" or rowArgs.total)
     end
 
     styleItem(td, rowArgs['cssArgs'], cellIndex)
