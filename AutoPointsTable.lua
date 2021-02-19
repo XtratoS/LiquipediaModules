@@ -194,8 +194,12 @@ function getTeamPointsDataFromLPDB(team, tournaments, deductions, queryResults)
     local totalPoints = 0
     local totalHiddenPoints = 0
 
+    local tournamentIndex = 0
     for columnIndex, columnTeamData in pairs(prettyData) do
         if type(columnIndex) == 'number' then
+            if columnTeamData.tournament.type == 'tournament' then
+                tournamentIndex = tournamentIndex + 1
+            end
             local tempPoints = tonumber(columnTeamData.points)
             local tempHiddenPoints = tonumber(columnTeamData.hiddenPoints)
             if tempPoints ~= nil then
@@ -208,7 +212,7 @@ function getTeamPointsDataFromLPDB(team, tournaments, deductions, queryResults)
             if tempHiddenPoints ~= nil then
                 totalHiddenPoints = totalHiddenPoints + tempHiddenPoints
             end
-            if team.q and (gConfig.autoqual == true) then
+            if team.q and (team.q <= tournamentIndex) and (gConfig.autoqual == true) then
                 prettyData['total'..columnIndex] = 'q'
                 prettyData['hiddenPoints'..columnIndex] = -team.q
             else
@@ -443,7 +447,7 @@ function setGlobalConfig(args)
             })
             i = i + 1
         end
-        local currentStageIndex = tonumber(args['current-stage'])
+        local currentStageIndex = tonumber(args['current-stage']) or #gConfig.stages
         if currentStageIndex <= #gConfig.stages then
             gConfig.currentStageIndex = currentStageIndex
         else
