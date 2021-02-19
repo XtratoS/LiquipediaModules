@@ -55,7 +55,6 @@ function p.main(frame)
 
   local tableData = {}
   for i, team in pairs(teams) do
-    -- local teamPointsData = getTeamPointsData(team, tournaments, deductions)
     local teamPointsData = getTeamPointsDataFromLPDB(team, tournaments, deductions, queryResults)
     tableData[i] = teamPointsData
   end
@@ -75,7 +74,7 @@ function p.main(frame)
   -- mw.log(inspect(tableData))
 
   return tostring(pointsTable)
-  .. '<br><pre>'..inspect(tableData)..'</pre>'
+  -- .. '<br><pre>'..inspect(tableData)..'</pre>'
   -- return tprint(args)..'\n\n\n\n'..tprint(tableData)
 
 end
