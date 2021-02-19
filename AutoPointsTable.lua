@@ -1,5 +1,5 @@
 ---- This Module creates a table that shows the points of teams in a point system tournament (using subobjects defined in prizepool templates), this was mainly created for the new Circuit System starting RLCS Season X.
----- Revision 1.3.1
+---- Revision 1.3.2
 ----
 ---- Team Names are case sensitive
 ----
@@ -466,6 +466,11 @@ function setGlobalConfig(args)
   end
   if args['ranking-name'] and (args['lpdbmute'] ~= 'true') then
     gConfig.lpdbname = args['ranking-name']
+  end
+  if args['name-cell-width'] then
+    gConfig.nameCellWidth = tonumber(args['name-cell-width'])
+  else
+    gConfig.nameCellWidth = 225
   end
 end
 
@@ -1388,6 +1393,7 @@ function makeTeamCell(frame, row, rowArgs, cellIndex)
   end
   td
     :css('text-align', 'left')
+    :css('max-width', tostring(gConfig.nameCellWidth)..'px')
     :wikitext(expandedTeam)
   styleItem(td, rowArgs['cssArgs'], cellIndex)
     :done()
