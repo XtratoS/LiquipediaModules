@@ -34,7 +34,7 @@ function p.organizer(frame)
 		limit = limit
   })
 
-  return p.makeHtmlTable(frame, tournamentsData)
+  return p.makeResultsHTMLTable(frame, tournamentsData)
 end
 
 --- Creates the table using tournaments organized by the provided series.
@@ -60,7 +60,7 @@ function p.series(frame)
 		limit = limit
   })
 
-  return p.makeHtmlTable(frame, tournamentsData)
+  return p.makeResultsHTMLTable(frame, tournamentsData)
 end
 
 --- Adds filters to query conditions
@@ -104,19 +104,19 @@ end
 -- @tparam frame frame
 -- @tparam {tournamentData,...} data the queried data of tournaments
 -- @treturn string text representing the html table
-function p.makeHtmlTable(frame, data)
+function p.makeResultsHTMLTable(frame, data)
   local tableWrapper = mw.html.create('div'):addClass('table-responsive')
-	local tableNode = createHeaderRow(tableWrapper)
-	createTableBody(frame, tableNode, data)
+	local tableNode = createResultsHeaderRow(tableWrapper)
+	createResultsTableBody(frame, tableNode, data)
 	return tostring(tableWrapper)
 end
 
---- Creates the html table body
+--- Creates the html table body for a touranments table
 -- @tparam frame frame
 -- @tparam node tableNode the html table node
 -- @tparam {tournamentData,...} data the queried data of tournaments
 -- @treturn nil
-function createTableBody(frame, tableNode, data)
+function createResultsTableBody(frame, tableNode, data)
 	local year = '0'
 	for _, tournament in ipairs(data) do
 		local tournamentYear = string.sub(tournament.sortdate, 1, 4)
@@ -220,35 +220,21 @@ function addWinnersDataToRow(frame, tournament, tableRow)
 	local firstPlaceOwnersCount = dataByPlacement[1] and #dataByPlacement[1] or 0
 	if firstPlaceOwnersCount > 1 then
 		ZINDEX = ZINDEX - 1
-		local firstPlaceTable = tableRow
+		local container = tableRow
 			:tag('td')
 				:attr('colspan', '2')
 				:tag('div')
-					:addClass('table-responsive')
-					:css('position', 'relative')
-					:css('z-index', ZINDEX)
-					:css('overflow', 'visible')
-					:tag('div')
-						:css('margin-top', '-10px')
-						:css('position', 'absolute')
-						:tag('table')
-							:addClass('collapsible')
-							:addClass('collapsed')
-							:addClass('table-striped')
-							:tag('tr')
-								:css('background-color', 'transparent')
-								:css('border', '1px solid transparent')
-								:tag('th')
-									:css('border-right', '0px')
-									:tag('div')
-										:css('width', '60px')
-										:css('display', 'inline-block')
-										:css('text-align', 'center')
-										:wikitext(protectedExpansion(frame, 'medal', {1}))
-										:done()
-									:wikitext(firstPlaceOwnersCount..' '..resultOwnerType..'s'..'  ')
-									:done()
-								:done()
+		
+		local title = tostring(
+				mw.html.create('div')
+					:css('width', '60px')
+					:css('display', 'inline-block')
+					:css('text-align', 'center')
+					:wikitext(protectedExpansion(frame, 'medal', {1}))
+				)..(
+					firstPlaceOwnersCount..' '..resultOwnerType..'s'..'  '
+				)
+		local firstPlaceTable = createExpandableTable(frame, container, title)
 		addFirstPlaceTable(frame, firstPlaceTable, dataByPlacement[1], resultOwnerType)
 	elseif firstPlaceOwnersCount == 1 then
 		local first = dataByPlacement[1][1]
@@ -286,6 +272,29 @@ function addWinnersDataToRow(frame, tournament, tableRow)
 					abbr('To be determined (or to be decided)', 'TBD')
 				)
 	end
+end
+
+function createExpandableTable(frame, container, title)
+	return container
+		:addClass('table-responsive')
+		:css('position', 'relative')
+		:css('z-index', ZINDEX)
+		:css('overflow', 'visible')
+		:tag('div')
+			:css('margin-top', '-10px')
+			:css('position', 'absolute')
+			:tag('table')
+				:addClass('collapsible')
+				:addClass('collapsed')
+				:addClass('table-striped')
+				:tag('tr')
+					:css('background-color', 'transparent')
+					:css('border', '1px solid transparent')
+					:tag('th')
+						:css('border-right', '0px')
+						:wikitext(title)
+						:done()
+					:done()
 end
 
 --- Creates and abbr tag
@@ -351,7 +360,7 @@ end
 --- Creates header row and appends it to the provided table wrapper
 -- @tparam node tableWrapper the table wrapper node
 -- @treturn node the table node
-function createHeaderRow(tableWrapper)
+function createResultsHeaderRow(tableWrapper)
 	return tableWrapper
 		:tag('table')
 			:addClass('wikitable')
