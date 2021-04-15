@@ -274,6 +274,10 @@ function addWinnersDataToRow(frame, tournament, tableRow)
 	end
 end
 
+--- Converts a div into an exapndable table container and returns the table node
+-- @tparam frame frame
+-- @tparam node container the div node to insert the table into
+-- @tparam string title the text to include in the table's header
 function createExpandableTable(frame, container, title)
 	return container
 		:addClass('table-responsive')
