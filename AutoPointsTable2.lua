@@ -1,6 +1,7 @@
 local p = {}
 
 local getArgs = require('Module:Arguments').getArgs
+local Team = require('Module:Team')
 local tprint = require('Module:TablePrinter').tprint
 local inspect = require('Module:Sandbox/inspect').inspect
 
@@ -13,12 +14,24 @@ local NAP = 'not a participant'
 function p.main(frame)
   local args = getArgs(frame)
 
+  -- {
+  --   ["Team Name"] = {
+  --     deductionX = string:deduction_points,
+  --     aliasX = string:some_alias,
+  --     displayX = string:team_display,
+  --     bgX = string:color,
+  --     index = number:team_index,
+  --     name = string:team_name,
+  --   }
+  -- }
+  -- X can be (nil), a number (x) or a range (x-y)
   local teams = expandSubTemplates(args, 'team')
+  resolveTeamNameRedirects(teams)
   local tournaments = expandSubTemplates(args, 'tournament')
 
-  expandSpannedTeamArgs(teams, 'alias')
-  expandSpannedTeamArgs(teams, 'display')
+  expandSpannedTeamArgs(teams, {'display', 'alias'})
   expandSpannedArgs(args, 'pbg')
+
   -- {
   --   ["Tournament 1"] = {
   --     ["Team 1"] = {
@@ -88,14 +101,23 @@ function p.main(frame)
   --   }
   -- }
   local sortedTeamPointsData = mapPointsDataToSortedRows(tournaments, teamPointsData)
-  addTrendData(teams, sortedTeamPointsData)
+  addTrendDataToTeamPointsData(teams, sortedTeamPointsData)
 
-  attachStylingData(teams, sortedTeamPointsData)
+  attachStylingDataToTeamPointsData(teams, sortedTeamPointsData)
 
   return '<br><pre>'..inspect({teams, tournaments, sortedTeamPointsData})..'</pre>'
 end
 
-function addTrendData(teams, sortedTeamPointsData)
+function resolveTeamNameRedirects(teams)
+  local page
+  for teamName, teamData in pairs(teams) do
+    page = Team.page(teamName)
+    teams[teamName] = nil
+    teams[page] = teamData
+  end
+end
+
+function addTrendDataToTeamPointsData(teams, sortedTeamPointsData)
   local previousRanking = {}
   for stageIndex, stageTeamPointsData in ipairs(sortedTeamPointsData) do
     for _, teamPointsData in ipairs(stageTeamPointsData) do
@@ -124,13 +146,15 @@ function expandSpannedArgs(argumentsArray, argName)
   end
 end
 
-function expandSpannedTeamArgs(teams, argName)
+function expandSpannedTeamArgs(teams, argNames)
   for teamName, team in pairs(teams) do
-    expandSpannedArgs(team, argName)
+    for _, argName in pairs(argNames) do
+      expandSpannedArgs(team, argName)
+    end
   end
 end
 
-function attachStylingData(teams, sortedTeamPointsData)
+function attachStylingDataToTeamPointsData(teams, sortedTeamPointsData)
   for tournamentIndex, stage in pairs(sortedTeamPointsData) do
     for __, row in pairs(stage) do
       local team = teams[row.name]
