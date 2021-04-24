@@ -80,8 +80,8 @@ function p.main(frame)
 end
 
 --- Performs required LPDB queries to get the placements of all teams in a tournament
--- tparam @{tournament,...} tournament the tournaments to query for
--- @treturn @{LPDBQueryResult,...} queryResults the results of all performed queries
+-- @tparam {tournament,...} tournaments the tournaments to query for
+-- @treturn {LPDBQueryResult,...} queryResults the results of all performed queries
 function queryLPDBPlacements(tournaments)
   local out = {}
   local queryParams = {
@@ -108,8 +108,8 @@ end
 -- @tparam teamData team
 -- @tparam {tournament,...} tournaments
 -- @tparam {tournament,...} deductions
--- @tparam @{LPDBQueryResult,...} queryResults the results of all performed queries
--- @treturn @{teamPoints} teamPoints the points data of a team
+-- @tparam {LPDBQueryResult,...} queryResults the results of all performed queries
+-- @treturn teamPoints teamPoints the points data of a team
 function getTeamPointsDataFromLPDB(team, tournaments, deductions, queryResults)
   local prettyData = {
     team = team
@@ -229,8 +229,8 @@ end
 
 --- Creates the Ranking LDPB objects
 --- https://liquipedia.net/commons/Help:LiquipediaDB
--- @tparam fram frame
--- @tparam @tparam {{cellTeamData,...},...} data the data table that contains the teams' data
+-- @tparam frame frame
+-- @tparam {{cellTeamData,...},...} tableData the data table that contains the teams' data
 -- @treturn number count the number of objects created
 function createLPDBObjects(frame, tableData)
   local objectCount = 0
@@ -584,7 +584,6 @@ end
 --- Fetches the teams' data.
 -- Fetches the table of teams provided by the main arguments to the template that invokes this module - case sensitive.
 -- @tparam table args the main template arguments
--- @tparam number numberOfTournaments the number of tournaments to check aliases for
 -- @treturn {{teamData,...},...} a table that contains data about teams; their name, aliases and point deductions in any of the tournaments
 function fetchTeamData(args)
   local teams = {}
