@@ -2,6 +2,7 @@ local p = {}
 
 local getArgs = require('Module:Arguments').getArgs
 local Team = require('Module:Team')
+local Utils = require('Module:LuaUtils')
 local tprint = require('Module:TablePrinter').tprint
 local inspect = require('Module:Sandbox/inspect').inspect
 
@@ -26,9 +27,8 @@ function p.main(frame)
   -- }
   -- X can be (nil), a number (x) or a range (x-y)
   local teams = expandSubTemplates(args, 'team')
-  resolveTeamNameRedirects(teams)
   local tournaments = expandSubTemplates(args, 'tournament')
-
+  teams = resolveTeamNameRedirects(teams)
   expandSpannedTeamArgs(teams, {'display', 'alias'})
   expandSpannedArgs(args, 'pbg')
 
@@ -110,11 +110,12 @@ end
 
 function resolveTeamNameRedirects(teams)
   local page
+  local out = {}
   for teamName, teamData in pairs(teams) do
-    page = Team.page(teamName)
-    teams[teamName] = nil
-    teams[page] = teamData
+    page = Team.page(nil, teamName) or teamName
+    out[page] = teamData
   end
+  return out
 end
 
 function addTrendDataToTeamPointsData(teams, sortedTeamPointsData)
@@ -464,7 +465,6 @@ function queryLPDBPlacements(tournaments)
     local results = mw.ext.LiquipediaDB.lpdb('placement', queryParams)
     for _, result in pairs(results) do
       result.points = result.extradata.prizepoints or result.extradata.securedpoints
-      mw.log('-p-'..result.points..'-p-'..result.extradata.prizepoints..'-p-')
       result.extradata = nil
       local teamName = result.participant
       if not out[tournamentName] then
@@ -485,20 +485,20 @@ function expandSubTemplates(args, subTemplateName)
       if string.find(argVal, '$') then
         local subArgs = split(argVal, '$')
         local index = tonumber(argKey:sub(#subTemplateName+1))
-        local teamName = subArgs[1]
+        local subArgKey = subArgs[1]
         local teamData = {
           index = index,
-          name = teamName
+          name = subArgKey
         }
         for i, subArg in pairs(subArgs) do
           if string.find(subArg, '≃') then
             local ss = split(subArg, '≃')
-            local dataKey = ss[1]:sub(#teamName+1)
+            local dataKey = ss[1]:sub( #subArgKey + 1 )
             local dataValue = ss[2]
             teamData[dataKey] = dataValue
           end
         end
-        expandedArgs[teamName] = teamData
+        expandedArgs[subArgKey] = teamData
       end
     end
   end
@@ -515,11 +515,6 @@ function deepCopy(tbl)
   else
     return tbl
   end
-end
-
-function starts_with(str, start)
-   mw.log(str, start)
-   return str:sub(1, #start) == start
 end
 
 function split(s, delim)
