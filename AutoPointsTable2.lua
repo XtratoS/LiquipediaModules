@@ -401,51 +401,6 @@ function mapPlacementsToTeams(placements, templateTournamentsData, teams)
   return out
 end
 
--- function mapPlacementsToTeams(placements, templateTournamentsData, teams)
---   local out = {}
---   for teamName, team in pairs(teams) do
---     local teamData = {}
---     local teamDataAccumulator = {
---       name = teamName
---     }
---     local totalPoints = 0
---     local hiddenPoints = 0
-
---     local placementsArray = {}
---     local placementNamesArray = {}
---     for n, p in pairs(placements) do
---       local index = p.index
---       placementNamesArray[index] = n
---       placementsArray[index] = p
---     end
-
---     for tournamentIndex, tournamentPlacements in ipairs(placementsArray) do
---       local tournamentName = placementNamesArray[tournamentIndex]
---       if (tournamentPlacements[teamName]) then
---         local tournamentPoints = tournamentPlacements[teamName].points
---         if tournamentPoints == '' then
---           teamDataAccumulator[tournamentIndex] = templateTournamentsData[tournamentName].secured or 'ongoing or upcoming'
---         else
---           teamDataAccumulator[tournamentIndex] = tournamentPoints
---           totalPoints = totalPoints + (tonumber(tournamentPoints) or 0)
---         end
---       else
---         if templateTournamentsData[tournamentName].finished == 'true' then
---           teamDataAccumulator[tournamentIndex] = 'did not play'
---         else
---           teamDataAccumulator[tournamentIndex] = 'ongoing or upcoming'
---         end
---       end
---       teamDataAccumulator.total = totalPoints
---       teamData[tournamentIndex] = deepCopy(teamDataAccumulator)
---     end
-
---     out[teamName] = teamData
---   end
-
---   return out
--- end
-
 function index(tbl)
   local out = {}
   for _, item in pairs(tbl) do
