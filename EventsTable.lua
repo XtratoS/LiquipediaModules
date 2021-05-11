@@ -1,11 +1,12 @@
 ---- This module creates a table that contains a set of events determined by the input
 -- @author XtratoS
--- @release 1.0
+-- @release 1.01
 
 local p = {}
 
 local getArgs = require('Module:Arguments').getArgs
 local utils = require('Module:LuaUtils')
+local resolveRedirect = require('Module:Redirect').luaMain
 local split = utils.string.split
 local expandTemplate = utils.frame.expandTemplate
 local protectedExpansion = utils.frame.protectedExpansion
@@ -16,14 +17,19 @@ local ZINDEX = 9000
 -- @treturn string the html table
 function p.organizer(frame)
   local args = getArgs(frame)
-  local organizer = getArg(args, 'organizer')
-  local limit = getArg(args, 'limit', '200')
+  local organizer = resolveRedirect(getArg(args, 'organizer'))
+  local limit = getArg(args, 'limit', '500')
 	local conditions =
 		'[[organizers_organizer1::'..organizer..']] OR'..
 		'[[organizers_organizer2::'..organizer..']] OR'..
 		'[[organizers_organizer3::'..organizer..']] OR'..
 		'[[organizers_organizer4::'..organizer..']] OR'..
-		'[[organizers_organizer5::'..organizer..']]'
+		'[[organizers_organizer5::'..organizer..']] OR'..
+		'[[organizers_organizer1::'..args.organizer..']] OR'..
+		'[[organizers_organizer2::'..args.organizer..']] OR'..
+		'[[organizers_organizer3::'..args.organizer..']] OR'..
+		'[[organizers_organizer4::'..args.organizer..']] OR'..
+		'[[organizers_organizer5::'..args.organizer..']]'
 
 	conditions = applyFilters(args, conditions)
 
@@ -49,7 +55,7 @@ function p.series(frame)
 	end
 
   conditions = conditions:sub(1, -4)
-  local limit = getArg(args, 'limit', '200')
+  local limit = getArg(args, 'limit', '500')
 
 	conditions = applyFilters(args, conditions)
 
@@ -107,7 +113,8 @@ end
 function p.makeResultsHTMLTable(frame, data)
   local tableWrapper = mw.html.create('div'):addClass('table-responsive')
 	local tableNode = createResultsHeaderRow(tableWrapper)
-	createResultsTableBody(frame, tableNode, data)
+	local bottomPadding = createResultsTableBody(frame, tableNode, data)
+	tableWrapper:css('padding-bottom', bottomPadding..'px')
 	return tostring(tableWrapper)
 end
 
@@ -115,9 +122,10 @@ end
 -- @tparam frame frame
 -- @tparam node tableNode the html table node
 -- @tparam {tournamentData,...} data the queried data of tournaments
--- @treturn nil
+-- @treturn number bottomPadding the number of pixels to apply as bottom padding for the whole table
 function createResultsTableBody(frame, tableNode, data)
 	local year = '0'
+	local lastTableRowWinnersTableRowCount = 0
 	for _, tournament in ipairs(data) do
 		local tournamentYear = string.sub(tournament.sortdate, 1, 4)
 		if (year ~= tournamentYear) then
@@ -165,8 +173,10 @@ function createResultsTableBody(frame, tableNode, data)
 					:wikitext(tournament.extradata.participantnumber)
 					:done()
 		
-		addWinnersDataToRow(frame, tournament, tableRow)
+		lastTableRowWinnersTableRowCount = addWinnersDataToRow(frame, tournament, tableRow)
 	end
+	local bottomPadding = (lastTableRowWinnersTableRowCount - 1) * 35 + 40
+	return bottomPadding
 end
 
 --- Queried placements data
@@ -185,7 +195,7 @@ end
 -- @tparam frame frame
 -- @tparam tournamentData tournament the tournament which is being renderred in this row
 -- @tparam node tableRow the table row node
--- @treturn nil
+-- @treturn number firstPlaceOwnersCount the number of players that won the 1st place prize
 function addWinnersDataToRow(frame, tournament, tableRow)
 	local mode = tournament.extradata.mode
 	local resultOwnerType = mode == '1v1' and 'Player' or 'Team'
@@ -272,6 +282,7 @@ function addWinnersDataToRow(frame, tournament, tableRow)
 					abbr('To be determined (or to be decided)', 'TBD')
 				)
 	end
+	return firstPlaceOwnersCount
 end
 
 --- Converts a div into an exapndable table container and returns the table node
