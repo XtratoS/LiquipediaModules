@@ -26,10 +26,23 @@ function p.main(frame)
   --   }
   -- }
   -- X can be (nil), a number (x) or a range (x-y)
-  local teams = expandSubTemplates(args, 'team')
+  local teams = getTeams(args)
+
+  -- {
+  --   ["RLCS Season X - Winter: EU Major"] = {
+  --     display = "T2 Display",
+  --     finished = "true",
+  --     index = 2,
+  --     name = "RLCS Season X - Winter: EU Major"
+  --   },
+  --   ["RLCS Season X - Winter: NA Major"] = {
+  --     index = 3,
+  --     name = "RLCS Season X - Winter: NA Major"
+  --   }
+  -- }
   local tournaments = expandSubTemplates(args, 'tournament')
-  teams = resolveTeamNameRedirects(teams)
-  expandSpannedTeamArgs(teams, {'display', 'alias'})
+
+  expandSpannedTeamArgs(teams, {'display', 'alias', 'bg'})
   expandSpannedArgs(args, 'pbg')
 
   -- {
@@ -100,12 +113,16 @@ function p.main(frame)
   --     }
   --   }
   -- }
-  local sortedTeamPointsData = mapPointsDataToSortedRows(tournaments, teamPointsData)
-  addTrendDataToTeamPointsData(teams, sortedTeamPointsData)
+  local sortedTeamPointsData = mapPointsDataToSortedRows(teams, tournaments, teamPointsData)
+  attachStylingAndDisplayDataToTeamPointsData(teams, sortedTeamPointsData)
 
-  attachStylingDataToTeamPointsData(teams, sortedTeamPointsData)
+  --local htmlTable = createTableFromData(frame, tournaments, teams, sortedTeamPointsData)
+  return '<br><pre>'..inspect({teams, sortedTeamPointsData})..'</pre>'
+end
 
-  return '<br><pre>'..inspect({teams, tournaments, sortedTeamPointsData})..'</pre>'
+function getTeams(args)
+  local teams = expandSubTemplates(args, 'team')
+  return resolveTeamNameRedirects(teams)
 end
 
 function resolveTeamNameRedirects(teams)
@@ -155,24 +172,26 @@ function expandSpannedTeamArgs(teams, argNames)
   end
 end
 
-function attachStylingDataToTeamPointsData(teams, sortedTeamPointsData)
-  for tournamentIndex, stage in pairs(sortedTeamPointsData) do
-    for __, row in pairs(stage) do
-      local team = teams[row.name]
+function attachStylingAndDisplayDataToTeamPointsData(teams, sortedTeamPointsData)
+  for tableIndex, tableData in pairs(sortedTeamPointsData) do
+    for __, rowData in pairs(tableData) do
+      local team = teams[rowData.name]
+      local display = team.display;
       local bg = team.bg
-      local bgX = team['bg'..tournamentIndex]
+      local displayX = team['display'..tableIndex]
+      local bgX = team['bg'..tableIndex]
       local strike = (team.dq == 'true') or (team.strike == 'true') 
-      if bgX then
-        team['bg'..tournamentIndex + 1] = bgX
-      end
-      row.bg = bgX or bg
-      row.strike = strike
+      local disband = team['disband'..tableIndex] == 'true'
+      
+      rowData.bg = bgX and bgX or bg
+      rowData.display = displayX and displayX or display
+      rowData.strike = strike
     end
   end
   return sortedTeamPointsData
 end
 
-function mapPointsDataToSortedRows(tournaments, pointsData)
+function mapPointsDataToSortedRows(teams, tournaments, pointsData)
   local sortedRows = {}
   for tournamentName, tournament in pairs(tournaments) do
     local tournamentIndex = tournament.index
@@ -199,6 +218,9 @@ function mapPointsDataToSortedRows(tournaments, pointsData)
     sortedRows[tournamentIndex] = sortedRowsUntilTournament
 
   end
+
+  addTrendDataToTeamPointsData(teams, sortedRows)
+
   return sortedRows
 end
 
@@ -249,16 +271,6 @@ function createTableFromData(frame, tournaments, teams, historicalTeamPointsData
   
   addTableHeaders(htmlTable, tournaments)
 
-  if true then
-    for _, rawDataTab in pairs(historicalTeamPointsData) do
-      mapRawDataToTableRow(htmlTable, rawDataTab)
-      -- htmlTable:tag('tr'):tag('td'):wikitext(inspect(d))
-    end
-  else
-    local d = historicalTeamPointsData[#historicalTeamPointsData]
-    htmlTable:tag('tr'):tag('td'):wikitext(inspect(d))
-  end
-
   return tostring(htmlTable)
 end
 
@@ -284,9 +296,9 @@ function addTableHeaders(htmlTable, tournaments)
     'TotalPoints',
   }
 
-  for n, p in pairs(tournaments) do
-    local index = p.index
-    headerCellsArray[index + 4] = p
+  for _, tournament in pairs(tournaments) do
+    local index = tournament.index
+    headerCellsArray[index + 4] = tournament
   end
 
   local tableHeaderRow = htmlTable:tag('tr')
@@ -301,7 +313,7 @@ function addTableHeaders(htmlTable, tournaments)
       )
   end
 
-  return
+  return tableHeaderRow;
 end
 
 function handleHistoricalData(tournaments, pointsData)
@@ -521,6 +533,19 @@ function fetchTournamentData(args)
   end
 
   return tournaments, deductions
+end
+
+function printBeautifulData(teamPointsData)
+  for tableIndex, tableData in ipairs(teamPointsData) do
+    mw.log(tableIndex .. ': {')
+    for rowIndex, rowData in ipairs(tableData) do
+      mw.log('    ' .. rowIndex .. ': {')
+      for cellIndex, cell in ipiars(rowData) do
+        mw.log('        ' .. cellIndex .. ': ' .. cell)
+      end
+    end
+    mw.log('}')
+  end
 end
 
 return p
