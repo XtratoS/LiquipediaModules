@@ -42,8 +42,8 @@ function p.main(frame)
   -- }
   local tournaments = expandSubTemplates(args, 'tournament')
 
-  expandSpannedTeamArgs(teams, {'display', 'alias', 'bg'})
-  expandSpannedArgs(args, 'pbg')
+  expandSpannedTeamArgs(teams, {{'display', true}, {'alias', true}, {'bg', true}, {'disband', false, #tournaments}})
+  expandSpannedArgs(args, {'pbg', true})
 
   -- {
   --   ["Tournament 1"] = {
@@ -147,7 +147,9 @@ function addTrendDataToTeamPointsData(teams, sortedTeamPointsData)
   end
 end
 
-function expandSpannedArgs(argumentsArray, argName)
+function expandSpannedArgs(argumentsArray, argVector)
+  local argName = argVector[1]
+  local useStoppageIndex = argVector[2]
   for key, value in pairs(argumentsArray) do
     if key:find(argName) and key:find('%-') then
       local startI = #argName
@@ -155,7 +157,7 @@ function expandSpannedArgs(argumentsArray, argName)
       local finishI = #key
 
       local from = tonumber(key:sub(startI + 1, separatorI - 1))
-      local to = tonumber(key:sub(separatorI + 1, finishI))
+      local to = useStoppageIndex == true and tonumber(key:sub(separatorI + 1, finishI)) or argVector[3]
 
       for i = from, to do
         argumentsArray[argName..i] = value
@@ -164,15 +166,16 @@ function expandSpannedArgs(argumentsArray, argName)
   end
 end
 
-function expandSpannedTeamArgs(teams, argNames)
+function expandSpannedTeamArgs(teams, argsVector)
   for teamName, team in pairs(teams) do
-    for _, argName in pairs(argNames) do
-      expandSpannedArgs(team, argName)
+    for _, argVector in pairs(argsVector) do
+      expandSpannedArgs(team, argVector)
     end
   end
 end
 
 function attachStylingAndDisplayDataToTeamPointsData(teams, sortedTeamPointsData)
+  local disbandedTeams = {}
   for tableIndex, tableData in pairs(sortedTeamPointsData) do
     for __, rowData in pairs(tableData) do
       local team = teams[rowData.name]
@@ -180,12 +183,17 @@ function attachStylingAndDisplayDataToTeamPointsData(teams, sortedTeamPointsData
       local bg = team.bg
       local displayX = team['display'..tableIndex]
       local bgX = team['bg'..tableIndex]
-      local strike = (team.dq == 'true') or (team.strike == 'true') 
+      local strike = (team.dq == 'true') or (team.strike == 'true')
+      
       local disband = team['disband'..tableIndex] == 'true'
+      if disband == true then
+        disbandedTeams[rowData.name] = true
+      end
       
       rowData.bg = bgX and bgX or bg
       rowData.display = displayX and displayX or display
       rowData.strike = strike
+      rowData.disband = disbandedTeams[rowData.name] or disband
     end
   end
   return sortedTeamPointsData
