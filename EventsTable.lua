@@ -1,13 +1,16 @@
 ---- This module creates a table that contains a set of events determined by the input
 -- @author XtratoS
--- @release 1.01
+-- @release 1.02
 
 local p = {}
 
 local getArgs = require('Module:Arguments').getArgs
 local utils = require('Module:LuaUtils')
 local resolveRedirect = require('Module:Redirect').luaMain
-local split = utils.string.split
+local split = require('Module:StringUtils').split
+local trim = require('Module:StringUtils').trim
+local contains = require('Module:StringUtils').contains
+local explode = require('Module:StringUtils').explode
 local expandTemplate = utils.frame.expandTemplate
 local protectedExpansion = utils.frame.protectedExpansion
 local ZINDEX = 9000
@@ -132,13 +135,15 @@ function createResultsTableBody(frame, tableNode, data)
 			year = tournamentYear
 			tableNode:tag('tr'):tag('th'):attr('colspan', '9'):wikitext(tournamentYear)
 		end
+		local locationFlag, locationText = extractLocationData(tournament.location)
 		local tableRow = tableNode
 			:tag('tr')
 				:tag('td')
 					:wikitext(tournament.sortdate)
 					:done()
 				:tag('td')
-					:wikitext(protectedExpansion(frame, 'Flag/'..tournament.location:lower())..' '..tournament.type)
+					:css('text-align', 'left')
+					:wikitext(protectedExpansion(frame, 'Flag/'..locationFlag)..' '..(locationText or tournament.type))
 					:done()
 				:tag('td')
 					:wikitext(protectedExpansion(frame, 'Tier/'..tournament.liquipediatier))
@@ -177,6 +182,15 @@ function createResultsTableBody(frame, tableNode, data)
 	end
 	local bottomPadding = (lastTableRowWinnersTableRowCount - 1) * 35 + 40
 	return bottomPadding
+end
+
+function extractLocationData(locationString)
+	if contains(locationString, ',') == false then
+		return locationString, nil
+	end
+	local country = explode(locationString, ',', 1):lower():sub(3)
+	local city = explode(locationString, ',', 0)
+	return country, city
 end
 
 --- Queried placements data
@@ -385,38 +399,38 @@ function createResultsHeaderRow(tableWrapper)
 			:css('text-align', 'center')
 			:tag('tr')
 				:tag('th')
-					:attr('width', '115')
+					-- :attr('width', '115')
 					:wikitext('Date')
 					:done()
 				:tag('th')
-					:attr('width', '115')
+					-- :attr('width', '115')
 					:wikitext('Location')
 					:done()
 				:tag('th')
-					:attr('width', '80')
+					-- :attr('width', '80')
 					:wikitext('Tier')
 					:done()
 				:tag('th')
-					:attr('width', '300')
+					-- :attr('width', '300')
 					:attr('colspan', '2')
 					:wikitext('Tournament')
 					:done()
 				:tag('th')
-					:attr('width', '90')
+					-- :attr('width', '90')
 					:wikitext('Prize')
 					:done()
 				:tag('th')
-					:attr('width', '60')
+					-- :attr('width', '60')
 					:wikitext(tostring(mw.html.create('abbr'):attr('title', 'Number of participants'):wikitext('#P')))
 					:done()
 				:tag('th')
 					:css('min-width', '160')
-					:attr('width', '190')
+					-- :attr('width', '190')
 					:wikitext('Winner')
 					:done()
 				:tag('th')
 					:css('min-width', '160')
-					:attr('width', '190')
+					-- :attr('width', '190')
 					:wikitext('Runner-up')
 					:done()
 				:done()
