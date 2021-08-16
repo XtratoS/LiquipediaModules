@@ -1,6 +1,6 @@
 ---- This module creates a table that contains a set of events determined by the input
 -- @author XtratoS
--- @release 1.02
+-- @release 1.03
 
 local p = {}
 
@@ -14,6 +14,8 @@ local explode = require('Module:StringUtils').explode
 local expandTemplate = utils.frame.expandTemplate
 local protectedExpansion = utils.frame.protectedExpansion
 local ZINDEX = 9000
+
+local DivTable = require('Module:DivTable')
 
 --- Creates the table using tournaments organized by the provided organizer.
 -- @tparam frame frame
@@ -114,11 +116,12 @@ end
 -- @tparam {tournamentData,...} data the queried data of tournaments
 -- @treturn string text representing the html table
 function p.makeResultsHTMLTable(frame, data)
-  local tableWrapper = mw.html.create('div'):addClass('table-responsive')
-	local tableNode = createResultsHeaderRow(tableWrapper)
+	local tableNode = DivTable.create():setStriped(true)
+	tableNode.root:addClass('tournament-card')
+	createResultsHeaderRow(tableNode)
 	local bottomPadding = createResultsTableBody(frame, tableNode, data)
-	tableWrapper:css('padding-bottom', bottomPadding..'px')
-	return tostring(tableWrapper)
+	tableNode.root:css('padding-bottom', bottomPadding..'px')
+	return tostring(tableNode:create())
 end
 
 --- Creates the html table body for a touranments table
@@ -133,52 +136,47 @@ function createResultsTableBody(frame, tableNode, data)
 		local tournamentYear = string.sub(tournament.sortdate, 1, 4)
 		if (year ~= tournamentYear) then
 			year = tournamentYear
-			tableNode:tag('tr'):tag('th'):attr('colspan', '9'):wikitext(tournamentYear)
+			-- tableNode:row(DivTable.HeaderRow():cell(mw.html.create('div'):wikitext(tournamentYear)))
 		end
 		local locationFlag, locationText = extractLocationData(tournament.location)
-		local tableRow = tableNode
-			:tag('tr')
-				:tag('td')
-					:wikitext(tournament.sortdate)
-					:done()
-				:tag('td')
-					:css('text-align', 'left')
-					:wikitext(protectedExpansion(frame, 'Flag/'..locationFlag)..' '..(locationText or tournament.type))
-					:done()
-				:tag('td')
-					:wikitext(protectedExpansion(frame, 'Tier/'..tournament.liquipediatier))
-					:done()
-				:tag('td')
-					:css('max-width', '45px')
-					:css('overflow-wrap', 'break-word')
-					:wikitext(expandWithFallback(
-						frame,
-						'LeagueIconSmall/'..tournament.series:lower(),
-						{},
-						function()
-							return protectedExpansion(frame, 'LeagueIconSmall/none')
-						end
-					))
-					:done()
-				:tag('td')
-					:css('text-align', 'left')
-					:wikitext('[['..tournament.pagename..'|'..tournament.name..']]')
-					:done()
-				:tag('td')
-					:css('text-align', 'left')
+		local tableRow = DivTable.Row()
+			:cell(mw.html.create('div'):addClass('EventDetails'):addClass('Date'):addClass('Header'):wikitext(tournament.sortdate))
+			:cell(mw.html.create('div'):addClass('EventDetails'):addClass('Location'):addClass('Header'):wikitext(protectedExpansion(frame, 'Flag/'..locationFlag)..' '..(locationText or tournament.type)))
+			:cell(mw.html.create('div'):addClass('EventDetails'):addClass('Location'):addClass('Header'):wikitext(protectedExpansion(frame, 'Tier/'..tournament.liquipediatier)))
+			:cell(mw.html.create('div'):addClass('Tournament'):addClass('Header'):wikitext(
+				expandWithFallback(
+					frame,
+					'LeagueIconSmall/'..tournament.series:lower(),
+					{},
+					function()
+						return protectedExpansion(frame, 'LeagueIconSmall/none')
+					end
+				) .. '&nbsp;&nbsp;[['..tournament.pagename..'|'..tournament.name..']]'
+			))
+			:cell(mw.html.create('div'):addClass('EventDetails'):addClass('Prize'):addClass('Header'):wikitext(
+				'$'..
+				mw.getContentLanguage():formatNum(
+					tonumber(tournament.prizepool)
+				)
+			))
+			:cell(
+				mw.html.create('div')
+					:addClass('EventDetails')
+					:addClass('PlayerNumber')
+					:addClass('Header')
 					:wikitext(
-						'$'..
-						mw.getContentLanguage():formatNum(
-							tonumber(tournament.prizepool)
+						tournament.extradata.participantnumber ..
+						tostring(
+							mw.html.create('span')
+								:addClass('PlayerNumberSuffix')
+								:wikitext('&nbsp;participants')
+							:done()
 						)
 					)
-					:done()
-				:tag('td')
-					:css('text-align', 'left')
-					:wikitext(tournament.extradata.participantnumber)
-					:done()
+			)
 		
 		lastTableRowWinnersTableRowCount = addWinnersDataToRow(frame, tournament, tableRow)
+		tableNode:row(tableRow)
 	end
 	local bottomPadding = (lastTableRowWinnersTableRowCount - 1) * 35 + 40
 	return bottomPadding
@@ -208,7 +206,7 @@ end
 --- Adds the columns corresponding to Winner and Runner-up header cells
 -- @tparam frame frame
 -- @tparam tournamentData tournament the tournament which is being renderred in this row
--- @tparam node tableRow the table row node
+-- @tparam DivTableRow tableRow the table row node
 -- @treturn number firstPlaceOwnersCount the number of players that won the 1st place prize
 function addWinnersDataToRow(frame, tournament, tableRow)
 	local mode = tournament.extradata.mode
@@ -244,57 +242,54 @@ function addWinnersDataToRow(frame, tournament, tableRow)
 	local firstPlaceOwnersCount = dataByPlacement[1] and #dataByPlacement[1] or 0
 	if firstPlaceOwnersCount > 1 then
 		ZINDEX = ZINDEX - 1
-		local container = tableRow
-			:tag('td')
-				:attr('colspan', '2')
-				:tag('div')
+		local container = mw.html.create('div')
+			:addClass('table-responsive')
+			:css('position', 'relative')
+			:css('z-index', ZINDEX)
+			:css('overflow', 'visible')
 		
-		local title = tostring(
+		local title_1 = tostring(
 				mw.html.create('div')
 					:css('width', '60px')
 					:css('display', 'inline-block')
 					:css('text-align', 'center')
 					:wikitext(protectedExpansion(frame, 'medal', {1}))
 				)..(
-					firstPlaceOwnersCount..' '..resultOwnerType..'s'..'  '
+					firstPlaceOwnersCount..'x&nbsp;'
 				)
-		local firstPlaceTable = createExpandableTable(frame, container, title)
+		local title_2 = resultOwnerType..'s'
+		local firstPlaceTable = createExpandableTable(frame, title_1)
 		addFirstPlaceTable(frame, firstPlaceTable, dataByPlacement[1], resultOwnerType)
+		container:node(firstPlaceTable:done())
+		tableRow
+			:cell(mw.html.create('div'):addClass('Placement'):addClass('FirstPlace'):node(container))
+			:cell(mw.html.create('div'):addClass('Placement'):addClass('SecondPlace'):wikitext(''))
+
 	elseif firstPlaceOwnersCount == 1 then
 		local first = dataByPlacement[1][1]
 		local second = dataByPlacement[2][1]
 		tableRow
-			:tag('td')
-				:css('text-align', 'left')
-				:wikitext(renderParticipant(frame, first, resultOwnerType))
-				:done()
-			:tag('td')
-				:css('text-align', 'left')
-				:wikitext(renderParticipant(frame, second, resultOwnerType))
+			:cell(mw.html.create('div'):addClass('Placement'):addClass('FirstPlace'):wikitext(renderParticipant(frame, first, resultOwnerType)))
+			:cell(mw.html.create('div'):addClass('Placement'):addClass('SecondPlace'):wikitext(renderParticipant(frame, second, resultOwnerType)))
 		-- SHOW FIRST AND SECOND PLACE
 	else
 		tableRow
-			:tag('td')
-				:css('text-align', 'left')
-				:wikitext(
-					tostring(
-						mw.html.create('span')
-							:css('display', 'inline-block')
-							:css('width', '60px')
-					)..' '..
-					abbr('To be determined (or to be decided)', 'TBD')
-				)
-				:done()
-			:tag('td')
-				:css('text-align', 'left')
-				:wikitext(
-					tostring(
-						mw.html.create('span')
-							:css('display', 'inline-block')
-							:css('width', '60px')
-					)..' '..
-					abbr('To be determined (or to be decided)', 'TBD')
-				)
+			:cell(mw.html.create('div'):addClass('Placement'):addClass('FirstPlace'):wikitext(
+				tostring(
+					mw.html.create('span')
+						:css('display', 'inline-block')
+						:css('width', '60px')
+				)..' '..
+				abbr('To be determined (or to be decided)', 'TBD')
+			))
+			:cell(mw.html.create('div'):addClass('Placement'):addClass('SecondPlace'):wikitext(
+				tostring(
+					mw.html.create('span')
+						:css('display', 'inline-block')
+						:css('width', '60px')
+				)..' '..
+				abbr('To be determined (or to be decided)', 'TBD')
+			))
 	end
 	return firstPlaceOwnersCount
 end
@@ -303,27 +298,27 @@ end
 -- @tparam frame frame
 -- @tparam node container the div node to insert the table into
 -- @tparam string title the text to include in the table's header
-function createExpandableTable(frame, container, title)
-	return container
-		:addClass('table-responsive')
-		:css('position', 'relative')
-		:css('z-index', ZINDEX)
-		:css('overflow', 'visible')
-		:tag('div')
-			:css('margin-top', '-10px')
-			:css('position', 'absolute')
-			:tag('table')
-				:addClass('collapsible')
-				:addClass('collapsed')
-				:addClass('table-striped')
-				:tag('tr')
-					:css('background-color', 'transparent')
-					:css('border', '1px solid transparent')
-					:tag('th')
-						:css('border-right', '0px')
-						:wikitext(title)
-						:done()
+function createExpandableTable(frame, title)
+	return mw.html.create('div')
+		:css('margin-top', '-12px')
+		:css('position', 'absolute')
+		:tag('table')
+			:addClass('collapsible')
+			:addClass('collapsed')
+			:addClass('wikitable')
+			:addClass('wikitable-striped')
+			:css('background-color', 'transparent !important')
+			:tag('tr')
+				:css('background-color', 'transparent !important')
+				:css('border', '1px solid transparent !important')
+				:tag('th')
+					:css('background-color', 'transparent !important')
+					:css('border-color', 'transparent !important')
+					:css('border-right', '0px')
+					:css('padding', '0px')
+					:wikitext(title)
 					:done()
+				:done()
 end
 
 --- Creates and abbr tag
@@ -354,8 +349,9 @@ function addFirstPlaceTable(frame, tableNode, placements, participantType)
 				:css('border-left', '2px solid #a2a9b1')
 				:css('box-shadow', '6px 6px 12px rgba(0, 0, 0, 0.5)')
 				:tag('td')
-					:css('padding', '5px 0px')
+					:css('padding', '5px 12px 5px 0px')
 					:css('text-align', 'left')
+					:css('white-space', 'nowrap')
 					:wikitext(renderParticipant(frame, placement, participantType))
 					:done()
 		if (lastElement) then
@@ -387,53 +383,21 @@ function renderParticipant(frame, placement, participantType)
 end
 
 --- Creates header row and appends it to the provided table wrapper
--- @tparam node tableWrapper the table wrapper node
+-- @tparam DivTable tableNode the DivTable object
 -- @treturn node the table node
-function createResultsHeaderRow(tableWrapper)
-	return tableWrapper
-		:tag('table')
-			:addClass('wikitable')
-			:addClass('table-full-width')
-			:addClass('wikitable-striped')
-			:addClass('sortable')
-			:css('text-align', 'center')
-			:tag('tr')
-				:tag('th')
-					-- :attr('width', '115')
-					:wikitext('Date')
-					:done()
-				:tag('th')
-					-- :attr('width', '115')
-					:wikitext('Location')
-					:done()
-				:tag('th')
-					-- :attr('width', '80')
-					:wikitext('Tier')
-					:done()
-				:tag('th')
-					-- :attr('width', '300')
-					:attr('colspan', '2')
-					:wikitext('Tournament')
-					:done()
-				:tag('th')
-					-- :attr('width', '90')
-					:wikitext('Prize')
-					:done()
-				:tag('th')
-					-- :attr('width', '60')
-					:wikitext(tostring(mw.html.create('abbr'):attr('title', 'Number of participants'):wikitext('#P')))
-					:done()
-				:tag('th')
-					:css('min-width', '160')
-					-- :attr('width', '190')
-					:wikitext('Winner')
-					:done()
-				:tag('th')
-					:css('min-width', '160')
-					-- :attr('width', '190')
-					:wikitext('Runner-up')
-					:done()
-				:done()
+function createResultsHeaderRow(tableNode)
+	tableNode:row(
+		DivTable.HeaderRow()
+			:cell(mw.html.create('div'):wikitext('Date'))
+			:cell(mw.html.create('div'):wikitext('Location'))
+			:cell(mw.html.create('div'):wikitext('Tier'))
+			:cell(mw.html.create('div'):wikitext('Tournament'))
+			:cell(mw.html.create('div'):wikitext('Prize'))
+			:cell(mw.html.create('div'):wikitext(tostring(mw.html.create('abbr'):attr('title', 'Number of participants'):wikitext('#P'))))
+			:cell(mw.html.create('div'):wikitext('Winner'))
+			:cell(mw.html.create('div'):wikitext('Runner-up'))
+	)
+	return
 end
 
 --- Expands a template if exists, otherwise calls the fallback function
