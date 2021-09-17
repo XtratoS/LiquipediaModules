@@ -1,5 +1,5 @@
 ---- This Module creates a table that shows the points of teams in a point system tournament (using subobjects defined in prizepool templates), this was mainly created for the new Circuit System starting RLCS Season X.
----- Revision 1.3.2
+---- Revision 1.3.3
 ----
 ---- Team Names are case sensitive
 ----
@@ -163,7 +163,8 @@ function getTeamPointsDataFromLPDB(team, tournaments, deductions, queryResults)
           local deductionData = getTeamDeductionDataByIndex(team, tournamentIndex)
           prettyData[columnIndex] = {
             tournament = deduction,
-            points = deductionData.points
+            points = deductionData.points,
+            note = deductionData.note
           }
           columnIndex = columnIndex + 1
         end
@@ -617,6 +618,10 @@ function fetchTeamData(args)
           tempTeam['deduction'..j] = deduction
         end
 
+        if args[teamName..'deduction'..j..'note'] then
+          tempTeam['deduction'..j..'note'] = args[teamName..'deduction'..j..'note']
+        end
+
         if args[teamName..'points'..j] then
           local points = tonumber(args[teamName..'points'..j])
           tempTeam['points'..j] = points
@@ -1042,13 +1047,16 @@ end
 -- @treturn @{deductionData} deduction data for the team in the tournament
 function getTeamDeductionDataByIndex(team, tournamentIndex)
   local points
+  local note
   if team['deduction'..tournamentIndex] then
     points = team['deduction'..tournamentIndex]
+    note = team['deduction'..tournamentIndex..'note']
   else
     points = 0
   end
   return {
-    points = points
+    points = points,
+    note = note
   }
 end
 
@@ -1475,7 +1483,7 @@ function makeDeductionPointsCell(frame, row, rowArgs, cell, c)
     label = protectedExpansion(frame, 'Popup', {
       label = -cell.points,
       title = 'Point Deductions ('..cell['tournament']['tournamentName']..')',
-      content = frame:preprocess('{{#lst:{{FULLPAGENAME}}|'..teamName..'-c'..c..'}}')
+      content = cell.note and cell.note or frame:preprocess('{{#lst:{{FULLPAGENAME}}|'..teamName..'-c'..c..'}}')
     })
   else
     label = ''
