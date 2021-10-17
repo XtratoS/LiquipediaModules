@@ -1,5 +1,5 @@
 ---- This Module creates a table that shows the points of teams in a point system tournament (using subobjects defined in prizepool templates), this was mainly created for the new Circuit System starting RLCS Season X.
----- Revision 1.3.3
+---- Revision 1.3.4
 ----
 ---- Team Names are case sensitive
 ----
@@ -23,6 +23,7 @@ local inspect = require('Module:Sandbox/inspect').inspect
 local SIN_45_DEG = 1 / math.sqrt(2)
 local gConfig = {}
 local gData = {}
+local expandedTeamCache = {}
 
 --- Entry point.
 -- This is the entry point of the Module.
@@ -55,7 +56,7 @@ function p.main(frame)
 
   local tableData = {}
   for i, team in pairs(teams) do
-    local teamPointsData = getTeamPointsDataFromLPDB(team, tournaments, deductions, queryResults)
+    local teamPointsData = getTeamPointsDataFromPlacements(team, tournaments, deductions, queryResults)
     tableData[i] = teamPointsData
   end
   
@@ -93,6 +94,7 @@ function queryLPDBPlacements(tournaments)
     local results = mw.ext.LiquipediaDB.lpdb('placement', queryParams)
     for _, result in pairs(results) do
       result.points = result.extradata.prizepoints
+      result.securedPoints = result.extradata.securedpoints
       result.extradata = nil
       local teamName = result.participant
       if not out[tournamentIndex] then
@@ -101,6 +103,7 @@ function queryLPDBPlacements(tournaments)
       out[tournamentIndex][teamName] = result
     end
   end
+  mw.log(inspect(out))
   return out
 end
 
@@ -110,7 +113,7 @@ end
 -- @tparam {tournament,...} deductions
 -- @tparam {LPDBQueryResult,...} queryResults the results of all performed queries
 -- @treturn teamPoints teamPoints the points data of a team
-function getTeamPointsDataFromLPDB(team, tournaments, deductions, queryResults)
+function getTeamPointsDataFromPlacements(team, tournaments, deductions, queryResults)
   local prettyData = {
     team = team
   }
@@ -129,6 +132,7 @@ function getTeamPointsDataFromLPDB(team, tournaments, deductions, queryResults)
           prettyData[columnIndex] = {
             tournament = tournament,
             points = teamResult.points,
+            securedPoints = teamResult.securedPoints,
             placement = teamResult.placement
           }
         else
@@ -151,6 +155,10 @@ function getTeamPointsDataFromLPDB(team, tournaments, deductions, queryResults)
         if team['hiddenPoints'..tournamentIndex] then
           prettyData[columnIndex].hiddenPoints = tonumber(team['hiddenPoints'..tournamentIndex])
         end
+
+        -- if team['securedPoints'..tournamentIndex] then
+        --   prettyData[columnIndex].securedPoints = tonumber(team['securedPoints'..tournamentIndex])
+        -- end
 
         if (team.q == tournamentIndex) and (gConfig.autoqual == true) then
           prettyData[columnIndex].points = 'Q'
@@ -186,6 +194,17 @@ function getTeamPointsDataFromLPDB(team, tournaments, deductions, queryResults)
         end
 
         columnIndex = columnIndex + 1
+
+        if deductions[tournamentIndex] then
+          local deduction = deductions[tournamentIndex]
+          local deductionData = getTeamDeductionDataByIndex(team, tournamentIndex)
+          prettyData[columnIndex] = {
+            tournament = deduction,
+            points = deductionData.points,
+            note = deductionData.note
+          }
+          columnIndex = columnIndex + 1
+        end
       end
     end
     tournamentIndex = tournamentIndex + 1
@@ -195,12 +214,12 @@ function getTeamPointsDataFromLPDB(team, tournaments, deductions, queryResults)
   local totalHiddenPoints = 0
 
   local tournamentIndex = 0
-  for columnIndex, columnTeamData in pairs(prettyData) do
-    if type(columnIndex) == 'number' then
+  for columnIndex, columnTeamData in ipairs(prettyData) do
+    -- if type(columnIndex) == 'number' then
       if columnTeamData.tournament.type == 'tournament' then
         tournamentIndex = tournamentIndex + 1
       end
-      local tempPoints = tonumber(columnTeamData.points)
+      local tempPoints = tonumber(columnTeamData.points) or tonumber(columnTeamData.securedPoints)
       local tempHiddenPoints = tonumber(columnTeamData.hiddenPoints)
       if tempPoints ~= nil then
         if columnTeamData.tournament.type == 'tournament' then
@@ -219,11 +238,11 @@ function getTeamPointsDataFromLPDB(team, tournaments, deductions, queryResults)
         prettyData['total'..columnIndex] = totalPoints
         prettyData['hiddenPoints'..columnIndex] = totalHiddenPoints
       end
-    end
+    -- end
   end
 
   prettyData.total = totalPoints
-  prettyData.hiddenPoints = hiddenPoints
+  prettyData.hiddenPoints = totalHiddenPoints
 
   return prettyData
 end
@@ -632,6 +651,11 @@ function fetchTeamData(args)
           tempTeam['hiddenPoints'..j] = points
         end
 
+        if args[teamName..'securedPoints'..j] then
+          local points = tonumber(args[teamName..'securedPoints'..j])
+          tempTeam['securedPoints'..j] = points
+        end
+
         if args[teamName..'q'..j] then
           tempTeam.q = j
         end
@@ -856,143 +880,6 @@ function addDeductionArgs(headerArgs, title)
   return headerArgs
 end
 
---- Fetches the points of a team for the given tournaments.
--- @tparam teamData team
--- @tparam {tournament,...} tournaments
--- @tparam {tournament,...} deductions
--- @return @{teamPoints}
-function getTeamPointsData(team, tournaments, deductions)
-  local prettyData = {
-    team = team
-  }
-  local tournamentIndex = 1
-
-  local columnIndex = 1
-
-  local tournamentQueryResults = queryTeamResultsFromSMW(team, tournaments)
-
-  while tournaments[tournamentIndex] do
-    local tournament = tournaments[tournamentIndex]
-    if tournament.type == 'tournament' then
-      if tournamentQueryResults and tournamentQueryResults[tournamentIndex] then
-
-        local queryResult = tournamentQueryResults[tournamentIndex]
-        local queryPoints = queryResult.prizepoints
-        local queryPlacement = queryResult.placement
-
-        prettyData[columnIndex] = {
-          tournament = tournament,
-          points = queryPoints,
-          placement = queryPlacement
-        }
-      else
-        local tournamentPointsString = getTournamentPointsString(tournament)
-
-        prettyData[columnIndex] = {
-          tournament = tournament,
-          points = tournamentPointsString
-        }
-      end
-
-      local manualPoints = getManualPoints(team, columnIndex)
-      if manualPoints then
-        prettyData[columnIndex].points = manualPoints
-      end
-
-      if team['hiddenPoints'..tournamentIndex] then
-        prettyData[columnIndex].hiddenPoints = tonumber(team['hiddenPoints'..tournamentIndex])
-      end
-
-      columnIndex = columnIndex + 1
-      -- if the tournament has a deductions column name value provided, then check if the provided team has any deductions from this tournaments' points
-      if deductions[tournamentIndex] then
-        local deduction = deductions[tournamentIndex]
-        local deductionData = getTeamDeductionDataByIndex(team, tournamentIndex)
-        prettyData[columnIndex] = {
-          tournament = deduction,
-          points = deductionData.points
-        }
-        columnIndex = columnIndex + 1
-      end
-
-      tournamentIndex = tournamentIndex + 1
-    end
-  end
-
-  local totalPoints = 0
-  local totalHiddenPoints = 0
-
-  for columnIndex, columnTeamData in pairs(prettyData) do
-    if type(columnIndex) == 'number' then
-      local tempPoints = tonumber(columnTeamData.points)
-      local tempHiddenPoints = tonumber(columnTeamData.hiddenPoints)
-      if tempPoints ~= nil then
-        if columnTeamData.tournament.type == 'tournament' then
-          totalPoints = totalPoints + tempPoints
-        elseif columnTeamData.tournament.type == 'deduction' then
-          totalPoints = totalPoints - tempPoints
-        end
-      end
-      if tempHiddenPoints ~= nil then
-        totalHiddenPoints = totalHiddenPoints + tempHiddenPoints
-      end
-      prettyData['total'..columnIndex] = totalPoints
-      prettyData['hiddenPoints'..columnIndex] = totalHiddenPoints
-    end
-  end
-  
-  prettyData.total = totalPoints
-  prettyData.hiddenPoints = totalHiddenPoints
-
-  return prettyData
-end
-
---- Performs the required SMW Queries to get the team prize points for all tournaments provided.
--- @tparam team team
--- @tparam {tournament,...} tournaments
--- @treturn ?|nil|{prettyResult,...} prettyResults
-function queryTeamResultsFromSMW(team, tournaments)
-  local conceptString = '[[Concept:'..gConfig['concept']..']] '
-  local teamString = team['name']
-  for teamArgKey, teamArgValue in pairs(team) do
-    if string.find(teamArgKey, 'alias') then
-      teamString = teamString .. '||' .. teamArgValue
-    end
-  end
-  teamString = '[[Has team page::'..teamString..']] '
-
-  local queryResults = mw.smw.ask(conceptString..teamString..'|?Has prizepoints|?Has tournament name|?Has team page#-|?Has placement')
-
-  if queryResults then
-    local prettyResults = {}
-    for _, result in pairs(queryResults) do
-      local tournamentName = result['Has tournament name']
-      local tournamentIndex = getIndexByName(tournaments, tournamentName)
-      if tournamentIndex then
-        local teamAlias
-        if team['alias'..tournamentIndex] then
-          teamAlias = team['alias'..tournamentIndex]
-        else
-          teamAlias = team['name']
-        end
-        local resultTeamName = result['Has team page']
-        if teamAlias == resultTeamName then
-          prettyResults[tournamentIndex] = {
-            tournamentName = tournamentName,
-            teamName = teamAlias,
-            prizepoints = result['Has prizepoints'],
-            placement = result['Has placement']
-          }
-
-        end
-      end
-    end
-    return prettyResults
-  else
-    return nil
-  end
-end
-
 --- Fetches the team name from the team page string.
 -- @tparam string teamPage
 -- @return string teamName
@@ -1124,7 +1011,7 @@ function createTableWrapper()
     :css('padding-top', '30px')
   
   if gConfig.historical == true then
-    preTable = makeHistoricalTabs(frame)
+    preTable = makeHistoricalTabs()
     tableWrapper:node(preTable)
   end
 
@@ -1174,9 +1061,8 @@ function addTableHeader(frame, htmlTable, customHeader, tournaments, deductions)
 end
 
 --- Creates the dropdown menu which selects a stage of a historical table to show.
--- @tparam frame frame
 -- @return mw.html dropdownWrapper the main div which contains the buttons
-function makeHistoricalTabs(frame)
+function makeHistoricalTabs()
   local dropdownWrapper = mw.html.create('div')
   dropdownWrapper
     :addClass('dropdown-box-wrapper')
@@ -1389,7 +1275,11 @@ function makeTeamCell(frame, row, rowArgs, cellIndex)
   if rowArgs['team']['display'] then
     expandedTeam = rowArgs['team']['display']
   else
-    expandedTeam = protectedExpansion(frame, 'Team', {teamName})
+    local cachedTeam = expandedTeamCache[teamName]
+    if not cachedTeam then
+      expandedTeamCache[teamName] = protectedExpansion(frame, 'Team', {teamName})
+    end
+    expandedTeam = expandedTeamCache[teamName]
   end
   if rowArgs['team']['strikeThrough'] then
     strike = true
@@ -1444,7 +1334,11 @@ end
 -- @return nil
 function makeTournamentPointsCell(frame, row, rowArgs, cell, cellIndex)
   local td = row:tag('td')
-  td:wikitext(cell.points)
+  local useSecuredPoints = cell.points == ''
+  td:wikitext(useSecuredPoints and cell.securedPoints or cell.points)
+  td
+    :css('background', useSecuredPoints and '#eaeaea' or '')
+    :css('font-weight', useSecuredPoints and 'normal' or 'bold')
   styleItem(td, rowArgs.cssArgs, cellIndex)
   -- if cell.placement then
   --   local placement = tonumber(split(cell.placement,'-')[1])
